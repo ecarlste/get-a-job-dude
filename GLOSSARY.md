@@ -60,6 +60,10 @@ _Avoid_: User, candidate, admin
 A trusted person the Owner grants access, who sees every Interview Loop and may add Notes and submit Job Leads but never changes a loop.
 _Avoid_: Guest, follower, assistant
 
+**Invitation**:
+The Owner's offer of Viewer access to one email address. Someone becomes a Viewer by accepting it while signed in with that same address; an Invitation is used once and lapses if not accepted in time.
+_Avoid_: Invite code, share link
+
 **Note**:
 A remark a Viewer or the Owner attaches to an Interview Loop, Phase, or Interview, such as a recommendation or reminder.
 _Avoid_: Comment, recommendation
