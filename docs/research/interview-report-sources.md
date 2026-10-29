@@ -1,0 +1,57 @@
+# Research: Where interview reports can come from
+
+Ticket: #18 (child of the Personal v1 spec map, #3). Researched 2026-10-29 against primary sources: each site's live `robots.txt` and Terms, and Anthropic's web search / web fetch docs. This is not legal advice. Terms change, so re-check before building on any one source.
+
+## Short answer
+
+**No interview-report site in the list is both reachable and allowed for the app to fetch automatically.** Every one bars automated access in its Terms. Reddit and interviewing.io go further and block Claude's fetcher in `robots.txt`, which the web fetch tool obeys. Glassdoor puts interview reports behind a login ("Give to Get"). LeetCode Discuss is rendered with JavaScript, which web fetch can't run.
+
+So the app should:
+
+1. **Treat Owner-pasted reports as the main source.** The Owner reads Glassdoor, Blind, LeetCode Discuss or Reddit in their own browser, while signed in, as an ordinary user, and pastes the useful parts into the app.
+2. **Use Claude's web search for discovery and light grounding.** Searches run against Anthropic's search provider's index, not the sites, and come back as cited snippets. On top of that, use **web fetch only for sources that allow it**: the company's own careers, "how we interview" and engineering-blog pages, plus general public articles. Put the restricted sites on `blocked_domains`.
+3. **Use no official API for interview reports.** None exists for an individual. Levels.fyi's API covers only pay and leveling, and Reddit's Data API needs pre-approval and bars non-approved use.
+
+## How Claude's server tools behave (Anthropic docs)
+
+Source: [Web fetch tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/web-fetch-tool), [Web search tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/web-search-tool), [Anthropic crawler FAQ](https://support.claude.com/en/articles/8896518-does-anthropic-crawl-data-from-the-web-and-how-can-site-owners-block-the-crawler).
+
+- **Web fetch honors `robots.txt`.** The `url_not_allowed` error covers "URL blocked by domain filtering rules ... or by Anthropic-side restrictions, such as private addresses, `robots.txt`, ...". A site whose `robots.txt` blocks Claude's user-facing agent therefore can't be fetched at all.
+- **Which agent applies:** Anthropic names three bots. *ClaudeBot* collects training data. *Claude-User* "retrieves websites when a Claude user asks a question". *Claude-SearchBot* indexes pages for search. All of them honor `robots.txt` ("Anthropic's Bots respect 'do not crawl' signals by honoring industry standard directives in robots.txt"). The docs don't name the user agent that the API's web fetch sends. User-triggered fetches most plausibly map to **Claude-User**, but that is an inference.
+- **No JavaScript:** "The web fetch tool currently does not support websites dynamically rendered with JavaScript." The docs point to the client-side browser-use tool instead.
+- **URL rule:** web fetch can only open URLs already in the conversation: user messages, client tool results, or earlier search and fetch results. A URL the Owner pastes counts, and so does a search hit.
+- **HTTP errors** come back as `url_not_accessible`. That covers 403s from bot protection and login walls.
+- **Controls:** `allowed_domains` *or* `blocked_domains`, never both (both gives a 400). Also `max_uses`, `max_content_tokens`, and `citations` (off by default for fetch). An org admin can also restrict domains in the Console.
+- **Cost:** web search is $10 per 1,000 searches plus tokens. Web fetch costs tokens only. Search citations are always on, and the docs require showing them when outputs go straight to users.
+
+## Per-source findings
+
+`robots.txt` files were read live on 2026-10-29. "Claude-User" refers to the agent most likely behind web fetch (see above).
+
+| Source | robots.txt for Claude-User | Content reachable without login? | Terms on automated / AI access | Verdict |
+|---|---|---|---|---|
+| **Glassdoor** | Not named, so falls under `*`: `/Interview/` mostly allowed (only `*_P*`, `*_IP*`, `*_IL*` pagination patterns disallowed). ClaudeBot, anthropic-ai and Claude-Web: `Disallow: /` | **No.** [Give-to-Get policy](https://help.glassdoor.com/s/article/Give-to-get-policy?language=en_US): full access to Interview reviews needs a contribution while signed in. Bot protection: plain fetches of `/Interview/` and `/about/terms.htm` returned **403** | [Terms of Use](https://www.glassdoor.com/about/terms.htm) (live page returned 403 to fetchers). Text captured 2026-09 by [ConductAtlas](https://conductatlas.com/platform/glassdoor/glassdoor-terms-of-use/provision/CA-P-027567/prohibition-on-automated-scraping-or-data-mining/): may not "introduce software or automated agents to the services ... to scrape, strip, or mine data ... without our express written permission" | **Not usable automatically.** Owner pastes |
+| **Blind** (teamblind) | Not named, so falls under `*`: allowed except `/search/`, `/user/history` and similar. ClaudeBot and anthropic-ai: `Disallow: /` | Not verified. Blind is a verified-employee community, and signed-out views are often partial | [Terms of Use](https://us.teamblind.com/setting/term) (effective 2026-10-04) §3 prohibits "Crawling, scraping, data mining, data extracting, duplicating, copying ... any part [of the Service] without explicit permission from Teamblind, whether through automated or manual means" | **Not allowed.** The ban reaches even manual copying, so Owner pastes are a personal-use gray area (see Risks) |
+| **Levels.fyi** | Explicitly `Allow: /` for **Claude-User** and Claude-SearchBot. `*` carries `Content-Signal: search=yes, ai-input=yes, ai-train=no` | Mostly yes, but plain curl got 403/405 | [Terms](https://www.levels.fyi/about/terms.html) (updated 2026-09-23) §2 bars access "by any automated means, including robots, scrapers, headless browsers, extensions and artificial intelligence agents", "including publicly accessible pages", unless there's a written agreement. Registered-user access "must be exercised manually" | **Conflict:** robots says yes, Terms say no, and the Terms win for us. Also mostly pay data, not interview reports. [API/MCP](https://www.levels.fyi/api-access) covers pay and leveling only (enterprise, on request) |
+| **LeetCode Discuss** | Only `User-agent: *`. `/discuss/` allowed (only `/discuss/index.php` disallowed), but `/graphql` and `/api/` are disallowed | Pages are a JavaScript app fed by GraphQL, so **web fetch gets little or no content**. Live `/terms` returned 403 to fetchers | [Terms](https://leetcode.com/terms) (via search snippet; the live page 403s): "crawling," "scraping," or "spidering" any part of the Service is "strictly forbidden" | **Not usable automatically.** Owner pastes |
+| **Reddit** | `User-agent: *` / `Disallow: /`, the whole site for every agent. The file points to its Public Content Policy | n/a: web fetch refuses (`url_not_allowed`). Claude Code's fetcher couldn't reach reddit.com either | [User Agreement](https://redditinc.com/policies/user-agreement) (effective 2026-07-01): crawling is permitted only "in accordance with ... our robots.txt", and "scraping the Services without Reddit's prior written consent is prohibited". [Data API Terms](https://redditinc.com/policies/data-api-terms) (revised 2026-07-20): any use "not expressly permitted" needs a separate agreement. Since Nov 2025, new API access needs **pre-approval** (Responsible Builder Policy; seen only via mirrors of the r/redditdev announcement, unverified) | **Not fetchable.** Search snippets may still surface threads. Owner pastes |
+| **interviewing.io** | **Claude-User, Claude-SearchBot, Claude-Code, ClaudeBot, anthropic-ai: `Disallow: /`** (only `/llms.txt` allowed) | Blog and mock-interview replays are public, but Claude can't fetch them | [Terms](https://interviewing.io/terms) §2: no "robots, spiders, crawlers or other automatic devices", and no use of the Service or Interviewing Materials "for the purpose of developing, training, or operating any machine learning or artificial intelligence models". Personal, non-commercial use only | **Not allowed.** Owner pastes or reads by hand |
+| **The company's own pages** (careers, "our interview process", engineering blog, recruiter prep PDFs) | Varies, usually open | Usually public HTML or PDF | Usually no anti-AI clause aimed at candidates. Check per site | **Best automatic source.** Official, current, and the company usually wants candidates to read it |
+
+## Recommended approach
+
+1. **Interview report = an Owner-supplied artifact first.** Let the Owner paste text, or a screenshot or PDF, of reports they read themselves, plus anything the recruiter sent. Store it with the Interview and use it to ground the Interview Brief and Prep Tasks. This is the only path that gets Glassdoor, Blind, LeetCode or Reddit content in without the app making automated requests.
+2. **Automatic enrichment, run by Claude with server tools:**
+   - `web_search` with `blocked_domains: ["glassdoor.com", "teamblind.com", "levels.fyi", "leetcode.com", "reddit.com", "interviewing.io"]`. That keeps results to sources we're allowed to follow up on, and avoids pointing web fetch at sites that will refuse it or that forbid it.
+   - `web_fetch` with the same `blocked_domains`, `citations: {enabled: true}`, a modest `max_uses` (about 5) and `max_content_tokens`. Point it at the company's interview-process and careers pages, plus public articles the search turns up.
+   - Show citations in the Interview Brief, as Anthropic's docs require.
+   - Optional, a judgement call: drop those domains from `blocked_domains` *for search only*, so snippets from Glassdoor or Reddit can hint at the process (search reads the provider's index, not the site). If so, show those hits to the Owner as "go read this yourself" links, and never fetch them.
+3. **Degrade gracefully.** Treat `url_not_allowed`, `url_not_accessible` and empty results as normal. The Brief should then say what it's based on (for example, "company pages + 2 pasted reports") and suggest which source the Owner could check by hand.
+4. **Don't** add a headless browser, proxies, or the Owner's session cookies to get past walls. Every Terms page above forbids it, and Levels.fyi explicitly names headless browsers and AI agents.
+
+## Risks and open items
+
+- **Owner paste vs. Terms:** Glassdoor, LeetCode, Reddit and interviewing.io aim their bans at *automated* access. A person reading a page and pasting excerpts into their own private notes tool is ordinary personal use. Blind's ban covers copying "through automated or manual means", so pasting Blind posts is technically outside its Terms, though it's for private notes only. Keep pasted text private to the Owner: no sharing, and no use for training.
+- **Unverified:** the exact user agent of the API's web fetch tool, and whether Anthropic's search index returns snippets from Reddit or Glassdoor. No API key was available here, so neither was probed. A five-minute probe with the real key (one search, one fetch per domain) would settle both before building. Also unverified: the current official text of Reddit's Responsible Builder Policy.
+- Glassdoor's and LeetCode's live Terms pages returned 403 to every non-browser fetcher, so their wording here comes from a dated third-party capture and a search snippet.
+- `robots.txt` and Terms change often (several of these were revised in 2026). Re-check them before relying on any source.
