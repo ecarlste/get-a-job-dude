@@ -40,6 +40,22 @@ _Avoid_: Todo, action item
 The Owner's record, made right after an Interview, of who they met, what was asked, and how it went.
 _Avoid_: Retro, recap, notes
 
+**Owner Profile**:
+Who the Owner is as a candidate: their résumé, strengths, gaps, and what they are looking for.
+_Avoid_: Resume, bio, about me
+
+**Story**:
+One of the Owner's own accounts of a situation they handled, told in full and tagged by the themes it shows; the Owner's Stories together are their story bank.
+_Avoid_: Anecdote, example, STAR answer
+
+**Company Brief**:
+What is known about the company behind an Interview Loop, such as what it does, its values, recent news, and how it interviews, shared by every Interview in that loop.
+_Avoid_: Company research, dossier, profile
+
+**Interview Brief**:
+The preparation picture for one Interview: who the interviewers are, the questions likely to come up, and the Owner's Stories retold briefly to fit this company.
+_Avoid_: Prep doc, cheat sheet, research
+
 ### App suggestions
 
 **Proposal**:
