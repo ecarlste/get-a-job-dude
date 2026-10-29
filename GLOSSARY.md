@@ -7,7 +7,7 @@ A personal job-search companion: it tracks every hiring process the Owner is in,
 ### Hiring process
 
 **Interview Loop**:
-One hiring process at one company for one role, from first contact until it ends in an offer decision, a rejection, or a withdrawal. Two roles at the same company are two Interview Loops.
+One hiring process at one company for one role, from the moment the company offers a first conversation until it ends in an offer decision, a rejection, a withdrawal, or the company going silent (ghosted), such as a no-show never rescheduled. Sending an application alone does not start one. Two roles at the same company are two Interview Loops.
 _Avoid_: Application, pipeline, process
 
 **Phase**:
@@ -19,8 +19,8 @@ An optional label saying what sort of step a Phase is (recruiter screen, technic
 _Avoid_: Phase type, category
 
 **Job Lead**:
-A potential job worth looking at that is not yet an Interview Loop.
-_Avoid_: Opportunity, posting, prospect
+A potential job worth looking at that is not yet an Interview Loop, including one the Owner has applied for without hearing back. The Owner promotes it to an Interview Loop once the company offers a first conversation.
+_Avoid_: Opportunity, posting, prospect, application
 
 **Interview**:
 A single conversation with specific people, held as part of a Phase. A Phase has one or more Interviews; an onsite of five back-to-back sessions is one Phase with five Interviews.
@@ -29,11 +29,11 @@ _Avoid_: Meeting, session, call
 ### Preparation
 
 **Itinerary**:
-The time-ordered view of upcoming Interviews and deadlines across all open Interview Loops, each with its open Prep Tasks.
+The time-ordered view of upcoming Interviews, scheduled Prep Tasks, and deadlines across all open Interview Loops.
 _Avoid_: Agenda, schedule, timeline
 
 **Prep Task**:
-A concrete piece of preparation for a specific upcoming Interview.
+A concrete piece of preparation for a specific upcoming Interview, which may be scheduled for a time with an estimated duration, like two hours of coding exercises the day before.
 _Avoid_: Todo, action item
 
 **Debrief**:
