@@ -1,0 +1,785 @@
+<title>Loops and Itinerary Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<!--
+  PROTOTYPE: throwaway. Answers "Loop flow view and Itinerary" (ecarlste/get-a-job-dude#9).
+  Three variants of the Release 1 main views, switchable from the floating bar or the hash:
+    #lanes  A: tabs; loops as swimlanes of Phase boxes; detail in a side drawer
+    #rail   B: Itinerary rail always visible; loops as metro lines; detail as a full page
+    #week   C: week calendar grid; loops on a date timeline; detail in a modal
+  Synthetic data only. State lives in memory; reload resets it. Owner/Viewer toggle in the bar.
+-->
+<style>
+/* Layout: an app shell with a quiet header; each variant owns everything below it. */
+:root {
+  --bg: #f2f5f6; --surface: #ffffff; --surface-2: #e8eef0; --line: #d2dbdf;
+  --fg: #16232a; --muted: #5a6a72;
+  --accent: #1d5f86; --accent-soft: #dcebf4; --accent-ink: #ffffff;
+  --next: #a65f00; --next-bg: #fff0d2;
+  --done: #2c7a4c; --done-bg: #e1f1e6;
+  --warn: #b42318; --warn-bg: #fde7e4;
+  --skip: #8a979d;
+  --bar-bg: #16232a; --bar-fg: #f2f5f6;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e161a; --surface: #152129; --surface-2: #1c2b34; --line: #2a3b45;
+    --fg: #e3ebee; --muted: #93a4ac;
+    --accent: #6cb2db; --accent-soft: #17344a; --accent-ink: #0b1a22;
+    --next: #f0b04a; --next-bg: #3a2a0e;
+    --done: #6cc493; --done-bg: #143222;
+    --warn: #f2877c; --warn-bg: #3d1714;
+    --skip: #6c7b82;
+    --bar-bg: #e3ebee; --bar-fg: #0e161a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e161a; --surface: #152129; --surface-2: #1c2b34; --line: #2a3b45;
+  --fg: #e3ebee; --muted: #93a4ac;
+  --accent: #6cb2db; --accent-soft: #17344a; --accent-ink: #0b1a22;
+  --next: #f0b04a; --next-bg: #3a2a0e;
+  --done: #6cc493; --done-bg: #143222;
+  --warn: #f2877c; --warn-bg: #3d1714;
+  --skip: #6c7b82;
+  --bar-bg: #e3ebee; --bar-fg: #0e161a;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 14px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 96px;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 700; margin: 0; text-wrap: balance; }
+p { margin: 0; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.eyebrow { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+
+/* shared header */
+.app-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; padding-block: 18px 14px; max-width: 1280px; margin: 0 auto; }
+.brand { font-family: var(--font-display); font-size: 22px; font-weight: 700; }
+.proto-tag { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; border: 1px dashed var(--muted); color: var(--muted); padding: 1px 6px; border-radius: 4px; }
+.clock { margin-left: auto; font-size: 12px; color: var(--muted); }
+.role-note { width: 100%; font-size: 13px; color: var(--muted); }
+main.shell { max-width: 1280px; margin: 0 auto; }
+
+/* chips */
+.chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+.chip-kind { background: var(--accent-soft); color: var(--accent); }
+.chip-due { background: var(--next-bg); color: var(--next); }
+.chip-warn { background: var(--warn-bg); color: var(--warn); }
+.chip-done { background: var(--done-bg); color: var(--done); }
+.chip-ending-offer { background: var(--done-bg); color: var(--done); }
+.chip-ending-rejected, .chip-ending-ghosted, .chip-ending-withdrawn { background: var(--surface-2); color: var(--muted); }
+.chip-by-viewer { background: var(--accent-soft); color: var(--accent); }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 4px 10px; font-size: 13px; }
+.btn:hover { border-color: var(--accent); }
+.btn-primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn-ghost { background: transparent; border-style: dashed; color: var(--muted); }
+.section-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; margin-block: 8px 12px; }
+.section-head h2 { font-size: 20px; }
+.section-head p { color: var(--muted); font-size: 13px; }
+
+/* ---------- shared detail body ---------- */
+.d-head { display: grid; gap: 6px; }
+.d-title { font-size: 24px; }
+.d-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.d-meta select { border: 1px solid var(--line); border-radius: 6px; background: var(--surface); padding: 2px 6px; font-size: 13px; }
+.d-strip { display: flex; gap: 4px; overflow-x: auto; padding-block: 4px; }
+.d-strip button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; font-size: 12px; padding: 2px 10px; white-space: nowrap; }
+.d-strip button.is-current { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.d-strip button.st-done { color: var(--done); }
+.d-strip button.st-skipped { color: var(--skip); text-decoration: line-through; }
+.d-sec { display: grid; gap: 10px; padding-top: 14px; border-top: 1px solid var(--line); }
+.d-sec h3 { font-size: 15px; }
+.d-body { display: grid; gap: 16px; }
+.empty { color: var(--muted); font-size: 13px; }
+.iv { border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 10px; background: var(--surface); }
+.iv.is-focus { border-color: var(--next); box-shadow: 0 0 0 2px var(--next-bg); }
+.iv.is-past { background: var(--bg); }
+.iv.is-noshow { border-color: var(--warn); }
+.iv-head { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; }
+.iv-when { font-weight: 500; }
+.iv-with { color: var(--muted); }
+.iv h4 { font-family: var(--font-body); font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); display: flex; gap: 8px; }
+.tasks { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.tasks li { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: start; }
+.tasks input { margin-top: 3px; }
+.tasks .t-meta { grid-column: 2; font-size: 12px; color: var(--muted); }
+.tasks li.is-done label { text-decoration: line-through; color: var(--muted); }
+.debrief textarea { width: 100%; min-height: 64px; border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; background: var(--surface); resize: vertical; }
+.notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.notes li { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; font-size: 13px; }
+.notes time { color: var(--muted); font-size: 12px; }
+.note-form { display: flex; gap: 6px; }
+.note-form input { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; background: var(--surface); }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; font-size: 13px; margin: 0; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.facts a { color: var(--accent); }
+
+/* ---------- job leads (shared) ---------- */
+.leads-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.leads { width: 100%; border-collapse: collapse; min-width: 720px; }
+.leads th, .leads td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; font-size: 13px; }
+.leads th { font-size: 12px; color: var(--muted); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.leads tr:last-child td { border-bottom: 0; }
+.dup { display: block; color: var(--warn); font-size: 12px; margin-top: 2px; }
+.lead-form { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.lead-form input { border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; background: var(--surface); min-width: 0; flex: 1 1 160px; }
+
+/* ---------- A: lanes ---------- */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 16px; overflow-x: auto; }
+.tabs button { border: 0; background: none; padding: 8px 12px; border-bottom: 2px solid transparent; color: var(--muted); font-weight: 500; white-space: nowrap; }
+.tabs button.is-on { color: var(--fg); border-bottom-color: var(--fg); }
+.tabs .count { font-family: var(--font-mono); font-size: 12px; margin-left: 4px; }
+.lanes { display: grid; gap: 10px; }
+.lane { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; align-items: center; }
+.lane-meta h3 { font-size: 17px; }
+.lane-meta p { font-size: 13px; color: var(--muted); }
+.flow { display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding: 14px 2px 4px; }
+.arrow { flex: 0 0 22px; align-self: center; height: 2px; background: var(--line); position: relative; }
+.arrow::after { content: ""; position: absolute; right: 0; top: -4px; border: 5px solid transparent; border-left-color: var(--line); border-right: 0; }
+.node { position: relative; flex: 0 0 168px; text-align: left; display: grid; gap: 2px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); }
+.node:hover { border-color: var(--accent); }
+.node-name { font-weight: 600; }
+.node-kind { font-size: 12px; color: var(--accent); }
+.node-when { font-size: 12px; }
+.node-status { font-size: 12px; color: var(--muted); }
+.node.st-done { background: var(--done-bg); border-color: transparent; }
+.node.st-done .node-status { color: var(--done); }
+.node.st-skipped { opacity: .55; }
+.node.st-expected { border-style: dashed; }
+.node.is-next { border: 2px solid var(--next); background: var(--next-bg); }
+.node.is-soon .node-when { color: var(--next); font-weight: 500; }
+.next-flag { position: absolute; top: -10px; left: 8px; background: var(--next); color: var(--surface); font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; padding: 0 6px; border-radius: 4px; }
+.node-add { flex: 0 0 auto; align-self: center; margin-left: 10px; }
+.ended { margin-top: 18px; }
+.ended summary { cursor: pointer; color: var(--muted); font-weight: 500; margin-bottom: 10px; }
+.ended .lane { opacity: .7; }
+.agenda { display: grid; gap: 18px; max-width: 760px; }
+.agenda h3 { font-size: 15px; margin-bottom: 6px; }
+.agenda ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.it { width: 100%; display: grid; grid-template-columns: 76px 70px minmax(0, 1fr) auto; gap: 10px; align-items: baseline; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.it:hover { border-color: var(--accent); }
+.it-kind { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.it-interview .it-kind { color: var(--accent); }
+.it-prep { border-style: dashed; }
+.it-prep .it-kind { color: var(--muted); }
+.it-due { background: var(--next-bg); border-color: transparent; }
+.it-due .it-kind { color: var(--next); }
+.it-main { display: grid; min-width: 0; }
+.it-main span { color: var(--muted); font-size: 13px; }
+.it-sub { grid-column: 3 / -1; font-size: 12px; color: var(--muted); }
+.it.is-past { opacity: .5; }
+.it.is-done .it-main strong { text-decoration: line-through; }
+.it-dur { font-size: 12px; color: var(--muted); }
+.scrim { position: fixed; inset: 0; background: color-mix(in srgb, var(--fg) 35%, transparent); z-index: 20; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(480px, 100%); background: var(--bg); border-left: 1px solid var(--line); z-index: 21; display: grid; grid-template-rows: auto 1fr; }
+.drawer-top { display: flex; justify-content: space-between; align-items: center; padding: calc(12px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 12px 16px; border-bottom: 1px solid var(--line); }
+.detail-scroll { overflow-y: auto; padding: 16px max(16px, env(safe-area-inset-right, 0px)) 110px 16px; }
+
+/* ---------- B: rail ---------- */
+.rail-shell { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; align-items: start; }
+.rail { position: sticky; top: calc(12px + env(safe-area-inset-top, 0px)); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; max-height: calc(100vh - 120px); overflow-y: auto; }
+.rail h2 { font-size: 17px; margin-bottom: 10px; }
+.rail-day { font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin: 12px 0 4px; }
+.rail-day.is-today { color: var(--next); }
+.rail-item { width: 100%; display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 0 8px; text-align: left; border: 0; background: none; padding: 5px 4px; border-radius: 6px; border-left: 3px solid var(--accent); margin-bottom: 2px; }
+.rail-item:hover { background: var(--surface-2); }
+.rail-item.k-prep { border-left-style: dotted; border-left-color: var(--muted); }
+.rail-item.k-due { border-left-color: var(--next); }
+.rail-item .ri-time { font-size: 12px; color: var(--muted); grid-row: span 2; }
+.rail-item .ri-title { font-weight: 500; font-size: 13px; overflow-wrap: anywhere; }
+.rail-item .ri-sub { font-size: 12px; color: var(--muted); }
+.rail-item.is-past { opacity: .5; }
+.rail-item.is-done .ri-title { text-decoration: line-through; }
+.metros { display: grid; gap: 4px; }
+.metro { padding: 14px 4px 10px; border-bottom: 1px solid var(--line); }
+.metro-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.metro-head h3 { font-size: 18px; }
+.metro-head .role { color: var(--muted); }
+.metro-head .next-sum { margin-left: auto; font-size: 13px; color: var(--next); font-weight: 500; }
+.line-wrap { overflow-x: auto; }
+.line { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(110px, 1fr); min-width: max-content; }
+.stop { position: relative; }
+.stop::before { content: ""; position: absolute; top: 9px; left: 0; right: 0; height: 3px; background: var(--line); }
+.stop:first-child::before { left: 50%; }
+.stop:last-child::before { right: 50%; }
+.stop.st-done::before { background: var(--done); }
+.stop button { position: relative; width: 100%; border: 0; background: none; display: grid; justify-items: center; gap: 2px; padding: 0 4px; text-align: center; }
+.dot { width: 21px; height: 21px; border-radius: 50%; border: 3px solid var(--line); background: var(--surface); }
+.stop.st-done .dot { background: var(--done); border-color: var(--done); }
+.stop.st-scheduled .dot { border-color: var(--accent); }
+.stop.st-skipped .dot { border-style: dotted; }
+.stop.is-next .dot { border-color: var(--next); background: var(--next-bg); box-shadow: 0 0 0 4px var(--next-bg); }
+.stop-name { font-size: 13px; font-weight: 500; margin-top: 4px; }
+.stop.is-next .stop-name { color: var(--next); }
+.stop-when { font-size: 12px; color: var(--muted); }
+.stop button:hover .stop-name { text-decoration: underline; }
+.page-detail { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 20px; }
+.crumbs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 14px; font-size: 13px; color: var(--muted); grid-column: 1 / -1; }
+.crumbs button { border: 0; background: none; color: var(--accent); padding: 0; }
+.vphases { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; align-self: start; position: sticky; top: 12px; }
+.vphases button { width: 100%; text-align: left; border: 0; background: none; padding: 6px 8px; border-radius: 6px; display: grid; grid-template-columns: 12px 1fr; gap: 0 8px; align-items: center; }
+.vphases button:hover { background: var(--surface-2); }
+.vphases button.is-current { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); font-weight: 600; }
+.vphases .vdot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--line); }
+.vphases .st-done .vdot { background: var(--done); border-color: var(--done); }
+.vphases .st-scheduled .vdot { border-color: var(--accent); }
+.vphases .is-next .vdot { border-color: var(--next); background: var(--next-bg); }
+.vphases small { grid-column: 2; color: var(--muted); font-size: 12px; font-weight: 400; }
+.page-detail .d-body { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+
+/* ---------- C: week + timeline ---------- */
+.week-wrap { overflow-x: auto; margin-bottom: 26px; }
+.week { display: grid; grid-template-columns: repeat(7, minmax(120px, 1fr)); gap: 6px; min-width: 860px; }
+.wday { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; min-height: 160px; display: grid; grid-template-rows: auto 1fr; }
+.wday.is-today { border-color: var(--next); }
+.wday-head { padding: 6px 8px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: baseline; }
+.wday-head strong { font-family: var(--font-display); font-size: 15px; }
+.wday.is-today .wday-head { background: var(--next-bg); }
+.wday-items { display: grid; align-content: start; gap: 4px; padding: 6px; }
+.wblock { text-align: left; border: 0; border-radius: 5px; padding: 4px 6px; display: grid; font-size: 12px; background: var(--accent-soft); color: var(--fg); }
+.wblock .wb-time { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
+.wblock .wb-title { font-weight: 500; overflow-wrap: anywhere; }
+.wblock .wb-sub { color: var(--muted); }
+.wblock.k-prep { background: transparent; outline: 1px dashed var(--line); outline-offset: -1px; }
+.wblock.k-prep .wb-time { color: var(--muted); }
+.wblock.k-due { background: var(--next-bg); }
+.wblock.k-due .wb-time { color: var(--next); }
+.wblock.is-past { opacity: .5; }
+.wblock.is-done .wb-title { text-decoration: line-through; }
+.wblock:hover { outline: 2px solid var(--accent); outline-offset: -2px; }
+.tl-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 26px; }
+.tl { min-width: 980px; position: relative; }
+.tl-row { display: grid; grid-template-columns: 190px minmax(0, 1fr) 170px; border-bottom: 1px solid var(--line); min-height: 50px; }
+.tl-row:last-child { border-bottom: 0; }
+.tl-row.is-ended { opacity: .6; }
+.tl-label { padding: 8px 10px; display: grid; align-content: center; border-right: 1px solid var(--line); }
+.tl-label strong { font-size: 14px; }
+.tl-label span { font-size: 12px; color: var(--muted); }
+.tl-track { position: relative; }
+.tl-track::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--line); }
+.tl-later { border-left: 1px dashed var(--line); padding: 6px; display: flex; flex-wrap: wrap; gap: 4px; align-content: center; }
+.tl-axis .tl-track, .tl-axis .tl-later, .tl-axis .tl-label { min-height: 30px; font-size: 11px; color: var(--muted); }
+.tick { position: absolute; top: 8px; transform: translateX(-50%); font-family: var(--font-mono); white-space: nowrap; }
+.today-line { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--next); z-index: 1; pointer-events: none; }
+.today-line span { position: absolute; top: 2px; left: 4px; font-size: 11px; color: var(--next); font-weight: 600; white-space: nowrap; }
+.mk { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; font-size: 12px; padding: 1px 8px 1px 6px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+.mk::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--line); flex: none; }
+.mk.st-done { background: var(--done-bg); border-color: transparent; }
+.mk.st-done::before { background: var(--done); }
+.mk.st-scheduled::before { background: var(--accent); }
+.mk.is-next { border: 2px solid var(--next); background: var(--next-bg); font-weight: 600; }
+.mk.is-next::before { background: var(--next); }
+.mk.k-due { border-radius: 4px; }
+.mk-later { position: static; transform: none; border-style: dashed; }
+.mk:hover { border-color: var(--accent); }
+.modal { position: fixed; z-index: 21; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(920px, calc(100% - 24px)); max-height: calc(100% - 48px); background: var(--bg); border-radius: 12px; border: 1px solid var(--line); display: grid; grid-template-rows: auto 1fr; overflow: hidden; }
+.modal .drawer-top { padding: 12px 16px; }
+.modal .detail-scroll { padding: 16px 18px 24px; }
+.modal .d-body { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); column-gap: 24px; }
+.modal .d-head, .modal .d-strip { grid-column: 1 / -1; }
+.modal .d-sec-ivs { grid-column: 1; grid-row: span 3; align-content: start; }
+
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); background: var(--fg); color: var(--bg); padding: 6px 14px; border-radius: 6px; font-size: 13px; z-index: 40; }
+
+/* ---------- prototype switcher (not part of the design) ---------- */
+.switcher { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 50; display: flex; align-items: center; gap: 4px; background: var(--bar-bg); color: var(--bar-fg); padding: 5px; border-radius: 999px; box-shadow: 0 6px 24px rgb(0 0 0 / .28); font-size: 13px; max-width: calc(100% - 24px); }
+.switcher button { border: 0; background: transparent; color: inherit; border-radius: 999px; padding: 5px 10px; }
+.switcher button:hover { background: color-mix(in srgb, var(--bar-fg) 15%, transparent); }
+.sw-label { padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.sw-role { display: flex; border-left: 1px solid color-mix(in srgb, var(--bar-fg) 30%, transparent); padding-left: 4px; margin-left: 2px; }
+.sw-role button.is-on { background: var(--bar-fg); color: var(--bar-bg); }
+
+@media (max-width: 760px) {
+  .lane { grid-template-columns: 1fr; }
+  .rail-shell { grid-template-columns: 1fr; }
+  .rail { position: static; max-height: none; }
+  .page-detail { grid-template-columns: 1fr; }
+  .vphases { position: static; grid-auto-flow: column; overflow-x: auto; }
+  .vphases button { white-space: nowrap; }
+  .it { grid-template-columns: 64px minmax(0, 1fr) auto; }
+  .it-kind { grid-column: 2; grid-row: 1; }
+  .it-main { grid-column: 2 / -1; }
+  .it-dur { grid-column: 3; grid-row: 1; }
+  .modal .d-body { grid-template-columns: 1fr; }
+  .modal .d-sec-ivs { grid-row: auto; }
+  .sw-label { max-width: 34vw; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .drawer { animation: slide-in .16s ease-out; }
+  @keyframes slide-in { from { transform: translateX(24px); opacity: .6; } }
+}
+</style>
+
+<div id="app"></div>
+
+<script>
+// ---------- prototype clock + synthetic data ----------
+const NOW = new Date(2026, 9, 29, 9, 0); // Thu Oct 29 2026, 9:00 AM
+const DAY = 864e5;
+const at = (day, hm) => { const [h, m] = hm.split(':').map(Number); return new Date(2026, 9, 29 + day, h, m); };
+const KINDS = ['recruiter screen', 'technical screen', 'take-home', 'onsite', 'hiring manager', 'offer'];
+const STATUSES = ['expected', 'scheduled', 'done', 'skipped'];
+
+let seq = 0;
+const nid = p => p + (++seq);
+const iv = (start, dur, withText, extra = {}) => ({ id: nid('i'), start, dur, with: withText, noShow: false, debrief: '', prep: [], notes: [], ...extra });
+const task = (title, opts = {}) => ({ id: nid('t'), title, done: false, at: null, est: null, ...opts });
+const ph = (name, kind, status, extra = {}) => ({ id: nid('p'), name, kind, status, due: null, interviews: [], notes: [], ...extra });
+const note = (by, text, when) => ({ id: nid('n'), by, text, when });
+const loopOf = (o) => ({ id: nid('L'), ending: 'open', people: '', notes: [], ...o });
+
+const state = {
+  loops: [
+    loopOf({ company: 'Halcyon Freight', role: 'Staff Backend Engineer', location: 'Remote (US)', link: 'https://example.com/jobs/halcyon-staff-backend', applied: at(-27, '12:00'),
+      people: 'Dana R. (recruiter), Priya S. (hiring manager)',
+      notes: [note('Viewer', 'This one looks like the best fit so far.', at(-7, '20:00'))],
+      phases: [
+        ph('Recruiter call', 'recruiter screen', 'done', { interviews: [iv(at(-15, '10:00'), 30, 'Dana R., recruiter · phone', { debrief: 'Comp band shared. Team of 9. They want a January start.' })] }),
+        ph('Technical screen', 'technical screen', 'done', { interviews: [iv(at(-8, '13:00'), 60, 'Marcus T. · Zoom', { debrief: 'Rate limiter design. Went well; ran short on testing talk.' })] }),
+        ph('Virtual onsite', 'onsite', 'scheduled', {
+          notes: [note('Viewer', 'Ask how big the on-call rotation is.', at(-1, '21:10'))],
+          interviews: [
+            iv(at(1, '10:00'), 60, 'Ines K., Staff Engineer · Zoom · system design', { prep: [
+              task('Sketch a shipment-tracking architecture', { done: true }),
+              task('Re-read event-sourcing notes', { at: at(0, '18:00'), est: 60 }),
+              task('Mock system design with a friend', { at: at(0, '20:00'), est: 45 }),
+            ] }),
+            iv(at(1, '11:15'), 45, 'Tomás L. · Zoom · coding', { prep: [task('Two timed graph problems', { est: 50 })] }),
+            iv(at(4, '13:00'), 45, 'Priya S., hiring manager · Zoom', { prep: [task('Write three stories: conflict, failure, scope cut', { at: at(3, '19:00'), est: 60 })] }),
+            iv(at(4, '14:00'), 30, 'Rae M. · Zoom · values'),
+          ] }),
+        ph('Offer', 'offer', 'expected'),
+      ] }),
+    loopOf({ company: 'Tallowmere Bank', role: 'Senior Software Engineer, Payments', location: 'Chicago, hybrid', link: 'https://example.com/jobs/tallowmere-payments', applied: at(-41, '12:00'),
+      phases: [
+        ph('Recruiter screen', 'recruiter screen', 'done', { interviews: [iv(at(-34, '11:00'), 30, 'Gwen A., recruiter · phone')] }),
+        ph('Technical screen', 'technical screen', 'done', { interviews: [iv(at(-24, '15:00'), 60, 'Hal O. · CoderPad')] }),
+        ph('Panel', 'onsite', 'done', { interviews: [iv(at(-14, '09:30'), 60, 'Two engineers · on site'), iv(at(-14, '10:45'), 60, 'Engineering director · on site')] }),
+        ph('Hiring manager', 'hiring manager', 'done', { interviews: [iv(at(-7, '16:00'), 30, 'Bea N. · Teams', { debrief: 'Warm. Asked about leading the ledger migration.' })] }),
+        ph('Offer', 'offer', 'scheduled', { due: at(8, '17:00'),
+          notes: [note('Owner', 'Decision deadline is firm per Gwen.', at(-1, '17:30'))],
+          interviews: [iv(at(1, '16:00'), 30, 'Gwen A., recruiter · phone · offer walkthrough', { prep: [task('List questions on equity refresh and bonus', { at: at(1, '12:00'), est: 20 })] })] }),
+      ] }),
+    loopOf({ company: 'Marrowbone Health', role: 'Senior Platform Engineer', location: 'Denver, hybrid', link: 'https://example.com/jobs/marrowbone-platform', applied: at(-20, '12:00'),
+      phases: [
+        ph('Recruiter screen', 'recruiter screen', 'done', { interviews: [iv(at(-9, '10:30'), 30, 'Jo P., recruiter · phone')] }),
+        ph('Take-home', 'take-home', 'scheduled', { due: at(5, '17:00') }),
+        ph('Technical deep-dive', 'technical screen', 'expected'),
+        ph('Hiring manager', 'hiring manager', 'expected'),
+      ] }),
+    loopOf({ company: 'Pinecrest Labs', role: 'Engineering Manager, Platform', location: 'Remote', link: 'https://example.com/jobs/pinecrest-em', applied: at(-9, '12:00'),
+      phases: [
+        ph('Intro with talent partner', 'recruiter screen', 'scheduled', { interviews: [iv(at(0, '14:00'), 30, 'Leah W. · Google Meet', { prep: [task('Skim the Pinecrest engineering blog', { at: at(0, '12:30'), est: 30 })] })] }),
+        ph('Hiring manager', 'hiring manager', 'expected'),
+      ] }),
+    loopOf({ company: 'Brindle & Co', role: 'Staff Engineer', location: 'Remote', link: 'https://example.com/jobs/brindle-staff', applied: at(-24, '12:00'),
+      phases: [
+        ph('Recruiter screen', 'recruiter screen', 'done', { interviews: [iv(at(-7, '09:00'), 30, 'Sol K., recruiter · phone')] }),
+        ph('Technical screen', 'technical screen', 'scheduled', { interviews: [iv(at(6, '11:00'), 60, 'Ola B. · Zoom · Go pairing', { prep: [task('Brush up on Go concurrency patterns', { at: at(5, '19:00'), est: 60 })] })] }),
+        ph('System design', 'technical screen', 'expected'),
+        ph('Onsite', 'onsite', 'expected'),
+      ] }),
+    loopOf({ company: 'Ostrava Robotics', role: 'Backend Engineer', location: 'Remote', link: 'https://example.com/jobs/ostrava-backend', applied: at(-30, '12:00'), ending: 'ghosted',
+      notes: [note('Owner', 'Recruiter no-show. Two follow-ups unanswered.', at(-4, '10:00'))],
+      phases: [ph('Recruiter screen', 'recruiter screen', 'scheduled', { interviews: [iv(at(-9, '15:00'), 30, 'Recruiter, name not given · phone', { noShow: true })] })] }),
+    loopOf({ company: 'Quillfeather', role: 'Senior Engineer', location: 'Remote', link: 'https://example.com/jobs/quillfeather-senior', applied: at(-37, '12:00'), ending: 'rejected',
+      phases: [
+        ph('Recruiter screen', 'recruiter screen', 'done', { interviews: [iv(at(-30, '13:00'), 30, 'Recruiter · phone')] }),
+        ph('Technical screen', 'technical screen', 'done', { interviews: [iv(at(-16, '10:00'), 60, 'Two engineers · Zoom', { debrief: 'Live debugging. Got stuck on the flaky test.' })] }),
+      ] }),
+  ],
+  leads: [
+    { id: nid('J'), company: 'Fernhollow Energy', role: 'Site Reliability Engineer', location: 'Austin, TX', link: 'https://example.com/jobs/fernhollow-sre', appliedOn: at(-8, '12:00'), notes: [] },
+    { id: nid('J'), company: 'Gallowglass Games', role: 'Backend Engineer, Live Services', location: 'Remote', link: 'https://example.com/jobs/gallowglass-live', appliedOn: null, submittedBy: 'Viewer', notes: [note('Viewer', 'Saw this posted. Team looks strong.', at(-2, '19:00'))] },
+    { id: nid('J'), company: 'Lumen Ridge', role: 'Platform Engineer', location: 'Remote', link: 'https://example.com/jobs/lumen-platform', appliedOn: at(-4, '12:00'), notes: [] },
+    { id: nid('J'), company: 'Saltmarsh Data', role: 'Data Platform Engineer', location: 'Boston, hybrid', link: 'https://example.com/jobs/saltmarsh-data', appliedOn: at(-15, '12:00'), notes: [note('Owner', 'Imported from Clera CSV.', at(-3, '09:00'))] },
+    { id: nid('J'), company: 'Quillfeather', role: 'Senior Engineer', location: 'Remote', link: 'https://example.com/jobs/quillfeather-senior-2', appliedOn: at(-3, '12:00'), notes: [] },
+    { id: nid('J'), company: 'Kittiwake Systems', role: 'Staff Engineer', location: 'Seattle, WA', link: 'https://example.com/jobs/kittiwake-staff', appliedOn: null, notes: [] },
+  ],
+};
+
+const VARIANTS = [
+  { key: 'lanes', label: 'A · Lanes, tabs, side drawer' },
+  { key: 'rail', label: 'B · Itinerary rail, metro lines, detail page' },
+  { key: 'week', label: 'C · Week grid, timeline, modal' },
+];
+const ui = { variant: 'lanes', role: 'owner', tab: 'loops', detail: null, scrollToFocus: false, toast: '' };
+
+// ---------- helpers ----------
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const TODAY = startOfDay(NOW);
+const dayDiff = d => Math.round((startOfDay(d) - TODAY) / DAY);
+const fmtTime = d => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+const fmtDate = d => d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+const fmtShort = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+const relDay = d => { const n = dayDiff(d); return n === 0 ? 'Today' : n === 1 ? 'Tomorrow' : n === -1 ? 'Yesterday' : fmtDate(d); };
+const relDayTime = d => `${relDay(d)} ${fmtTime(d)}`;
+const cap = s => s ? s[0].toUpperCase() + s.slice(1) : '';
+const isOwner = () => ui.role === 'owner';
+const roleName = () => isOwner() ? 'Owner' : 'Viewer';
+
+const openLoops = () => state.loops.filter(l => l.ending === 'open');
+const endedLoops = () => state.loops.filter(l => l.ending !== 'open');
+const findLoop = id => state.loops.find(l => l.id === id);
+const nextPhase = loop => loop.ending === 'open' ? loop.phases.find(p => p.status === 'scheduled' || p.status === 'expected') : null;
+const phaseAnchor = p => p.interviews.length ? p.interviews.map(i => i.start).sort((a, b) => a - b)[0] : p.due;
+const openPrep = p => p.interviews.reduce((n, i) => n + i.prep.filter(t => !t.done).length, 0);
+function upcoming(p) {
+  const ds = [...p.interviews.map(i => i.start), p.due].filter(d => d && d >= NOW).sort((a, b) => a - b);
+  return ds[0] || null;
+}
+const isSoon = p => { const u = upcoming(p); return !!u && (u - NOW) < 3 * DAY; };
+function whenLabel(p) {
+  if (p.interviews.length) {
+    const s = p.interviews.map(i => i.start).sort((a, b) => a - b);
+    if (s.length === 1) return relDayTime(s[0]);
+    const a = s[0], b = s[s.length - 1];
+    return dayDiff(a) === dayDiff(b) ? `${relDay(a)} · ${s.length} Interviews` : `${fmtShort(a)} to ${fmtShort(b)} · ${s.length} Interviews`;
+  }
+  if (p.due) return `Due ${fmtDate(p.due)}`;
+  return 'Not scheduled';
+}
+function shortWhen(p) {
+  const a = phaseAnchor(p);
+  if (!a) return 'not scheduled';
+  return (p.interviews.length ? '' : 'due ') + fmtShort(a);
+}
+
+function locate(kind, id) {
+  for (const loop of state.loops) {
+    if (kind === 'loop' && loop.id === id) return { loop };
+    for (const phase of loop.phases) {
+      if (kind === 'phase' && phase.id === id) return { loop, phase };
+      for (const i of phase.interviews) {
+        if (kind === 'iv' && i.id === id) return { loop, phase, iv: i };
+        for (const t of i.prep) if (kind === 'task' && t.id === id) return { loop, phase, iv: i, task: t };
+      }
+    }
+  }
+  return {};
+}
+
+// Itinerary: Interviews, scheduled Prep Tasks, and Phase due dates across open loops, from start of today.
+function itinerary() {
+  const items = [];
+  for (const loop of openLoops()) for (const phase of loop.phases) {
+    if (phase.due && phase.due >= TODAY) items.push({ kind: 'due', when: phase.due, loop, phase });
+    for (const i of phase.interviews) {
+      if (i.start >= TODAY) items.push({ kind: 'interview', when: i.start, loop, phase, iv: i });
+      for (const t of i.prep) if (t.at && t.at >= TODAY) items.push({ kind: 'prep', when: t.at, loop, phase, iv: i, task: t });
+    }
+  }
+  return items.sort((a, b) => a.when - b.when);
+}
+function byDay(items) {
+  const groups = new Map();
+  for (const it of items) { const k = startOfDay(it.when).getTime(); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(it); }
+  return [...groups.entries()].map(([k, list]) => ({ day: new Date(k), list }));
+}
+function itemText(it) {
+  if (it.kind === 'interview') return { title: it.phase.name, sub: `${it.loop.company} · ${it.iv.with}`, dur: `${it.iv.dur} min` };
+  if (it.kind === 'prep') return { title: it.task.title, sub: `${it.loop.company} · for ${it.phase.name}, ${relDay(it.iv.start)}`, dur: it.task.est ? `~${it.task.est} min` : '' };
+  return { title: `${it.phase.name} due`, sub: `${it.loop.company} · ${it.loop.role}`, dur: '' };
+}
+const itemFocus = it => it.iv ? it.iv.id : '';
+const itemClasses = it => [it.when < NOW && it.kind !== 'due' ? 'is-past' : '', it.task?.done ? 'is-done' : ''].join(' ');
+const openAttrs = (loop, phase, focus = '') => `data-action="open" data-loop="${loop.id}" data-phase="${phase.id}" data-focus="${focus}"`;
+
+function duplicateOf(lead) {
+  const same = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
+  const loop = state.loops.find(l => l.link === lead.link || (same(l.company, lead.company) && same(l.role, lead.role)));
+  if (loop) return `Possible duplicate: ${loop.company} loop${loop.applied ? `, applied ${fmtShort(loop.applied)}` : ''} (${loop.ending})`;
+  const other = state.leads.find(l => l !== lead && (l.link === lead.link || (same(l.company, lead.company) && same(l.role, lead.role))));
+  if (other) return `Possible duplicate of another lead${other.appliedOn ? `, applied ${fmtShort(other.appliedOn)}` : ''}`;
+  return '';
+}
+
+// ---------- shared pieces ----------
+const kindChip = p => p.kind ? `<span class="chip chip-kind">${esc(cap(p.kind))}</span>` : '';
+const endingChip = l => l.ending === 'open' ? '' : `<span class="chip chip-ending-${l.ending}">${cap(l.ending)}</span>`;
+function statusControl(p) {
+  if (!isOwner()) return `<span class="chip ${p.status === 'done' ? 'chip-done' : ''}">${cap(p.status)}</span>`;
+  return `<select id="status-${p.id}" data-action="set-status" data-phase="${p.id}" aria-label="Phase status">${STATUSES.map(s => `<option value="${s}" ${s === p.status ? 'selected' : ''}>${cap(s)}</option>`).join('')}</select>`;
+}
+function notesBlock(notes, target) {
+  const fid = 'note-' + target.replace(':', '-');
+  return `${notes.length ? `<ul class="notes">${notes.map(n => `<li><span class="chip ${n.by === 'Viewer' ? 'chip-by-viewer' : ''}">${n.by}</span><span>${esc(n.text)}</span><time>${relDay(n.when)}</time></li>`).join('')}</ul>` : ''}
+  <form class="note-form" data-target="${target}"><input id="${fid}" name="text" placeholder="Add a Note as ${roleName()}" autocomplete="off"><button class="btn">Add</button></form>`;
+}
+function taskRow(t) {
+  const when = t.at ? `${relDayTime(t.at)}` : 'Not scheduled';
+  return `<li class="${t.done ? 'is-done' : ''}"><input type="checkbox" id="task-${t.id}" data-action="toggle-task" data-task="${t.id}" ${t.done ? 'checked' : ''} ${isOwner() ? '' : 'disabled'}>
+    <label for="task-${t.id}">${esc(t.title)}</label><span class="t-meta">${when}${t.est ? ` · ~${t.est} min` : ''}</span></li>`;
+}
+function interviewCard(loop, phase, i, focus) {
+  const end = new Date(+i.start + i.dur * 60e3);
+  const past = i.start < NOW;
+  const open = i.prep.filter(t => !t.done).length;
+  let debrief;
+  if (i.noShow) debrief = `<p class="empty">Marked no-show. No Debrief.</p>`;
+  else if (!past) debrief = `<p class="empty">The Debrief opens once the Interview has happened.</p>`;
+  else if (isOwner()) debrief = `<textarea id="debrief-${i.id}" data-action="debrief" data-iv="${i.id}" placeholder="Who you met, what was asked, how it went">${esc(i.debrief)}</textarea>`;
+  else debrief = i.debrief ? `<p>${esc(i.debrief)}</p>` : `<p class="empty">No Debrief yet.</p>`;
+  return `<article class="iv ${focus === i.id ? 'is-focus' : ''} ${past ? 'is-past' : ''} ${i.noShow ? 'is-noshow' : ''}" id="iv-${i.id}">
+    <div class="iv-head"><span class="iv-when mono">${relDay(i.start)} · ${fmtTime(i.start)} to ${fmtTime(end)}</span><span class="muted">${i.dur} min</span>${i.noShow ? '<span class="chip chip-warn">No-show</span>' : ''}</div>
+    <p class="iv-with">With ${esc(i.with)}</p>
+    <div><h4>Prep Tasks <span>${i.prep.length ? `${open} of ${i.prep.length} open` : 'none'}</span></h4>${i.prep.length ? `<ul class="tasks">${i.prep.map(taskRow).join('')}</ul>` : ''}</div>
+    <div class="debrief"><h4>Debrief</h4>${debrief}</div>
+    <div><h4>Notes</h4>${notesBlock(i.notes, 'iv:' + i.id)}</div>
+    ${isOwner() && past ? `<div><button class="btn" data-action="toggle-noshow" data-iv="${i.id}">${i.noShow ? 'Clear no-show' : 'Mark no-show'}</button></div>` : ''}
+  </article>`;
+}
+function phaseStrip(loop, phase) {
+  const nx = nextPhase(loop);
+  return `<div class="d-strip" aria-label="Phases of this loop">${loop.phases.map(p => `<button class="st-${p.status} ${p.id === phase.id ? 'is-current' : ''}" ${openAttrs(loop, p)}>${p === nx ? 'Next: ' : ''}${esc(p.name)}</button>`).join('')}</div>`;
+}
+// The shared detail view, opened by a flow node or an Itinerary item. Each variant picks its container.
+function detailBody(loop, phase, focus, { strip = true } = {}) {
+  return `<div class="d-body">
+    <div class="d-head">
+      <p class="eyebrow">${esc(loop.company)} · ${esc(loop.role)} ${endingChip(loop)}</p>
+      <h2 class="d-title">${esc(phase.name)}</h2>
+      <div class="d-meta">${kindChip(phase)}${statusControl(phase)}${phase.due ? `<span class="chip chip-due">Due ${relDayTime(phase.due)}</span>` : ''}${nextPhase(loop) === phase ? '<span class="chip chip-due">Next up</span>' : ''}</div>
+    </div>
+    ${strip ? phaseStrip(loop, phase) : ''}
+    <section class="d-sec d-sec-ivs"><h3>Interviews</h3>${phase.interviews.length ? phase.interviews.map(i => interviewCard(loop, phase, i, focus)).join('') : `<p class="empty">No Interviews in this Phase${phase.due ? '. It has a deadline instead' : ' yet'}.</p>`}</section>
+    <section class="d-sec"><h3>Notes on this Phase</h3>${notesBlock(phase.notes, 'phase:' + phase.id)}</section>
+    <section class="d-sec"><h3>Notes on the loop</h3>${notesBlock(loop.notes, 'loop:' + loop.id)}</section>
+    <section class="d-sec"><h3>Loop</h3><dl class="facts">
+      <dt>Location</dt><dd>${esc(loop.location)}</dd>
+      <dt>Applied</dt><dd>${loop.applied ? fmtDate(loop.applied) : 'Not recorded'}</dd>
+      <dt>People</dt><dd>${esc(loop.people) || '<span class="muted">None recorded</span>'}</dd>
+      <dt>Job link</dt><dd><a href="${esc(loop.link)}" target="_blank" rel="noopener">${esc(loop.link)}</a></dd>
+    </dl></section>
+  </div>`;
+}
+function leadsSection() {
+  const promote = isOwner();
+  return `<div class="section-head"><h2>Job Leads</h2><p>Applied-for and possible jobs. They stay here until a company offers a first conversation.</p></div>
+  <div class="leads-wrap"><table class="leads"><thead><tr><th>Company</th><th>Role</th><th>Location</th><th>Applied</th><th>Notes</th><th></th></tr></thead><tbody>
+  ${state.leads.map(l => { const dup = duplicateOf(l); return `<tr>
+    <td><strong>${esc(l.company)}</strong>${l.submittedBy ? ` <span class="chip chip-by-viewer">From ${l.submittedBy}</span>` : ''}${dup ? `<span class="dup">${esc(dup)}</span>` : ''}</td>
+    <td>${esc(l.role)}</td><td>${esc(l.location)}</td>
+    <td class="mono">${l.appliedOn ? fmtShort(l.appliedOn) : '<span class="muted">Not yet</span>'}</td>
+    <td>${l.notes.map(n => `<span class="chip ${n.by === 'Viewer' ? 'chip-by-viewer' : ''}">${n.by}</span> ${esc(n.text)}`).join('<br>') || '<span class="muted">None</span>'}</td>
+    <td>${promote ? `<button class="btn" data-action="promote" data-lead="${l.id}">Promote to loop</button>` : ''}</td></tr>`; }).join('')}
+  </tbody></table></div>
+  <form class="lead-form" id="lead-form"><input id="lead-company" name="company" placeholder="Company" required autocomplete="off"><input id="lead-role" name="role" placeholder="Role" required autocomplete="off"><button class="btn btn-primary">${isOwner() ? 'Add Job Lead' : 'Submit a Job Lead'}</button></form>`;
+}
+function header() {
+  return `<header class="app-head"><span class="brand">Get a Job Dude</span><span class="proto-tag">Prototype · synthetic data</span>
+    <span class="clock mono">Clock fixed at ${fmtDate(NOW)}, ${fmtTime(NOW)}</span>
+    ${isOwner() ? '' : '<p class="role-note">Viewing as Viewer: you see every loop and can add Notes and submit Job Leads, but you never change a loop.</p>'}</header>`;
+}
+
+// ---------- Variant A: lanes ----------
+function laneNode(loop, p, nx) {
+  const n = openPrep(p);
+  return `<button class="node st-${p.status} ${p === nx ? 'is-next' : ''} ${p === nx && isSoon(p) ? 'is-soon' : ''}" ${openAttrs(loop, p)}>
+    ${p === nx ? '<span class="next-flag">Next</span>' : ''}
+    <span class="node-name">${esc(p.name)}</span><span class="node-kind">${esc(cap(p.kind))}</span>
+    <span class="node-when mono">${whenLabel(p)}</span>
+    <span class="node-status">${cap(p.status)}${n ? ` · ${n} prep open` : ''}</span></button>`;
+}
+function lane(loop) {
+  const nx = nextPhase(loop);
+  return `<article class="lane"><div class="lane-meta"><h3>${esc(loop.company)}</h3><p>${esc(loop.role)}</p><p>${esc(loop.location)} ${endingChip(loop)}</p></div>
+    <div class="flow">${loop.phases.map(p => laneNode(loop, p, nx)).join('<span class="arrow" aria-hidden="true"></span>')}
+    ${isOwner() && loop.ending === 'open' ? `<button class="btn btn-ghost node-add" data-action="add-phase" data-loop="${loop.id}">+ Phase</button>` : ''}</div></article>`;
+}
+function agendaItem(it) {
+  const t = itemText(it);
+  const open = it.kind === 'interview' ? it.iv.prep.filter(x => !x.done && !x.at) : [];
+  return `<li><button class="it it-${it.kind} ${itemClasses(it)}" ${openAttrs(it.loop, it.phase, itemFocus(it))}>
+    <span class="it-time mono">${fmtTime(it.when)}</span><span class="it-kind">${it.kind === 'due' ? 'Due' : cap(it.kind)}</span>
+    <span class="it-main"><strong>${esc(t.title)}</strong><span>${esc(t.sub)}</span></span><span class="it-dur">${t.dur}</span>
+    ${open.length ? `<span class="it-sub">Unscheduled prep: ${open.map(x => esc(x.title)).join(', ')}</span>` : ''}</button></li>`;
+}
+function variantLanes() {
+  const items = itinerary();
+  const tabs = [['loops', 'Interview Loops', openLoops().length], ['itinerary', 'Itinerary', items.filter(i => i.when >= NOW).length], ['leads', 'Job Leads', state.leads.length]];
+  let body;
+  if (ui.tab === 'loops') body = `<div class="lanes">${openLoops().map(lane).join('')}</div>
+    <details class="ended"><summary>Ended loops (${endedLoops().length})</summary><div class="lanes">${endedLoops().map(lane).join('')}</div></details>`;
+  else if (ui.tab === 'itinerary') body = `<div class="agenda">${byDay(items).map(g => `<section><h3>${relDay(g.day)}${dayDiff(g.day) <= 1 ? ` · ${fmtDate(g.day)}` : ''}</h3><ol>${g.list.map(agendaItem).join('')}</ol></section>`).join('')}</div>`;
+  else body = leadsSection();
+  let detail = '';
+  if (ui.detail) {
+    const { loop, phase } = locate('phase', ui.detail.phase);
+    detail = `<div class="scrim" data-action="close"></div><aside class="drawer" role="dialog" aria-label="Phase detail">
+      <div class="drawer-top"><span class="eyebrow">Phase detail</span><button class="btn" data-action="close">Close</button></div>
+      <div class="detail-scroll">${detailBody(loop, phase, ui.detail.focus)}</div></aside>`;
+  }
+  return `${header()}<main class="shell"><nav class="tabs">${tabs.map(([k, l, c]) => `<button class="${ui.tab === k ? 'is-on' : ''}" data-action="tab" data-tab="${k}">${l}<span class="count">${c}</span></button>`).join('')}</nav>${body}</main>${detail}`;
+}
+
+// ---------- Variant B: rail ----------
+function railItem(it) {
+  const t = itemText(it);
+  return `<button class="rail-item k-${it.kind} ${itemClasses(it)}" ${openAttrs(it.loop, it.phase, itemFocus(it))}>
+    <span class="ri-time mono">${fmtTime(it.when)}</span><span class="ri-title">${it.kind === 'prep' ? 'Prep: ' : ''}${esc(t.title)}</span><span class="ri-sub">${esc(it.loop.company)}${t.dur ? ` · ${t.dur}` : ''}</span></button>`;
+}
+function metro(loop) {
+  const nx = nextPhase(loop);
+  return `<article class="metro"><div class="metro-head"><h3>${esc(loop.company)}</h3><span class="role">${esc(loop.role)}</span>${endingChip(loop)}
+    ${nx ? `<span class="next-sum">Next: ${esc(nx.name)} · ${whenLabel(nx)}</span>` : ''}</div>
+    <div class="line-wrap"><ol class="line">${loop.phases.map(p => `<li class="stop st-${p.status} ${p === nx ? 'is-next' : ''}"><button ${openAttrs(loop, p)}><span class="dot"></span><span class="stop-name">${esc(p.name)}</span><span class="stop-when mono">${shortWhen(p)}</span></button></li>`).join('')}</ol></div></article>`;
+}
+function variantRail() {
+  const items = itinerary();
+  const rail = `<aside class="rail"><h2>Itinerary</h2>${byDay(items).map(g => `<p class="rail-day ${dayDiff(g.day) === 0 ? 'is-today' : ''}">${relDay(g.day)}</p>${g.list.map(railItem).join('')}`).join('')}</aside>`;
+  let main;
+  if (ui.detail) {
+    const { loop, phase } = locate('phase', ui.detail.phase);
+    const nx = nextPhase(loop);
+    main = `<div class="page-detail"><nav class="crumbs"><button data-action="close">All loops</button><span>/</span><span>${esc(loop.company)}</span><span>/</span><strong>${esc(phase.name)}</strong></nav>
+      <ol class="vphases">${loop.phases.map(p => `<li><button class="st-${p.status} ${p === nx ? 'is-next' : ''} ${p.id === phase.id ? 'is-current' : ''}" ${openAttrs(loop, p)}><span class="vdot"></span>${esc(p.name)}<small>${cap(p.status)} · ${shortWhen(p)}</small></button></li>`).join('')}</ol>
+      ${detailBody(loop, phase, ui.detail.focus, { strip: false })}</div>`;
+  } else {
+    main = `<div class="section-head"><h2>Interview Loops</h2><p>${openLoops().length} open. The ringed stop is each loop's next Phase.</p></div>
+      <div class="metros">${openLoops().map(metro).join('')}</div>
+      <details class="ended"><summary>Ended loops (${endedLoops().length})</summary><div class="metros">${endedLoops().map(metro).join('')}</div></details>
+      <div style="margin-top:28px">${leadsSection()}</div>`;
+  }
+  return `${header()}<main class="shell rail-shell">${rail}<div class="rail-main">${main}</div></main>`;
+}
+
+// ---------- Variant C: week + timeline ----------
+function variantWeek() {
+  const items = itinerary();
+  const days = Array.from({ length: 7 }, (_, k) => new Date(2026, 9, 29 + k));
+  const week = `<div class="week">${days.map(d => {
+    const list = items.filter(it => dayDiff(it.when) === dayDiff(d));
+    return `<div class="wday ${dayDiff(d) === 0 ? 'is-today' : ''}"><div class="wday-head"><strong>${d.toLocaleDateString('en-US', { weekday: 'short' })} ${d.getDate()}</strong><span class="muted">${dayDiff(d) === 0 ? 'Today' : ''}</span></div>
+      <div class="wday-items">${list.map(it => { const t = itemText(it); return `<button class="wblock k-${it.kind} ${itemClasses(it)}" ${openAttrs(it.loop, it.phase, itemFocus(it))}><span class="wb-time">${fmtTime(it.when)}${it.kind === 'due' ? ' · due' : it.kind === 'prep' ? ' · prep' : ''}</span><span class="wb-title">${esc(t.title)}</span><span class="wb-sub">${esc(it.loop.company)}</span></button>`; }).join('') || '<span class="empty">Free</span>'}</div></div>`;
+  }).join('')}</div>`;
+
+  const loops = [...openLoops(), ...endedLoops()];
+  const anchors = loops.flatMap(l => l.phases.map(phaseAnchor)).filter(Boolean);
+  const rs = new Date(Math.min(...anchors) - 3 * DAY), re = new Date(Math.max(+NOW + 17 * DAY, Math.max(...anchors) + 3 * DAY));
+  const pct = d => Math.min(97, Math.max(0, (d - rs) / (re - rs) * 100));
+  const ticks = []; for (let d = startOfDay(rs); d <= re; d = new Date(+d + DAY)) if (d.getDay() === 1) ticks.push(d);
+  const axis = `<div class="tl-row tl-axis"><div class="tl-label">Weeks of</div><div class="tl-track">${ticks.map(d => `<span class="tick" style="left:${pct(d)}%">${fmtShort(d)}</span>`).join('')}</div><div class="tl-later">Not yet scheduled</div></div>`;
+  const rows = loops.map(loop => {
+    const nx = nextPhase(loop);
+    const dated = loop.phases.filter(phaseAnchor), later = loop.phases.filter(p => !phaseAnchor(p));
+    const mk = (p, extra = '') => `<button class="mk st-${p.status} ${p === nx ? 'is-next' : ''} ${p.interviews.length ? '' : 'k-due'} ${extra}" title="${esc(p.name)} · ${esc(whenLabel(p))}" ${openAttrs(loop, p)}${extra ? '' : ` style="left:${pct(phaseAnchor(p))}%"`}>${esc(p.name)}${p.interviews.length ? '' : ' · due'}</button>`;
+    return `<div class="tl-row ${loop.ending !== 'open' ? 'is-ended' : ''}"><div class="tl-label"><strong>${esc(loop.company)}</strong><span>${esc(loop.role)} ${endingChip(loop)}</span></div>
+      <div class="tl-track">${dated.map(p => mk(p)).join('')}</div><div class="tl-later">${later.map(p => mk(p, 'mk-later')).join('')}</div></div>`;
+  }).join('');
+  const timeline = `<div class="tl">${axis}${rows}<div class="today-line" style="left:calc(190px + (100% - 360px) * ${pct(NOW) / 100})"><span>Now</span></div></div>`;
+
+  let detail = '';
+  if (ui.detail) {
+    const { loop, phase } = locate('phase', ui.detail.phase);
+    detail = `<div class="scrim" data-action="close"></div><div class="modal" role="dialog" aria-label="Phase detail">
+      <div class="drawer-top"><span class="eyebrow">${esc(loop.company)}</span><button class="btn" data-action="close">Close</button></div>
+      <div class="detail-scroll">${detailBody(loop, phase, ui.detail.focus)}</div></div>`;
+  }
+  return `${header()}<main class="shell">
+    <div class="section-head"><h2>This week</h2><p>Interviews, scheduled Prep Tasks, and Phase deadlines.</p></div><div class="week-wrap">${week}</div>
+    <div class="section-head"><h2>Interview Loops over time</h2><p>Each Phase sits on its date. The highlighted one is the loop's next Phase.</p></div><div class="tl-wrap">${timeline}</div>
+    ${leadsSection()}</main>${detail}`;
+}
+
+// ---------- render + switcher ----------
+function switcher() {
+  const v = VARIANTS.find(x => x.key === ui.variant);
+  return `<div class="switcher" role="toolbar" aria-label="Prototype controls">
+    <button data-action="variant" data-step="-1" aria-label="Previous variant">←</button><span class="sw-label">${v.label}</span><button data-action="variant" data-step="1" aria-label="Next variant">→</button>
+    <span class="sw-role">${['owner', 'viewer'].map(r => `<button class="${ui.role === r ? 'is-on' : ''}" data-action="role" data-role="${r}">${cap(r)}</button>`).join('')}</span></div>`;
+}
+function render() {
+  const sc = document.querySelector('.detail-scroll');
+  const keep = { win: window.scrollY, detail: sc ? sc.scrollTop : 0 };
+  const view = { lanes: variantLanes, rail: variantRail, week: variantWeek }[ui.variant];
+  document.getElementById('app').innerHTML = view() + switcher() + (ui.toast ? `<div class="toast" role="status">${esc(ui.toast)}</div>` : '');
+  const sc2 = document.querySelector('.detail-scroll');
+  if (ui.scrollToFocus) {
+    ui.scrollToFocus = false;
+    if (sc2) sc2.scrollTop = 0;
+    if (ui.variant === 'rail' && ui.detail) window.scrollTo(0, 0);
+    const el = ui.detail?.focus && document.getElementById('iv-' + ui.detail.focus);
+    if (el) el.scrollIntoView({ block: 'nearest' });
+  } else {
+    window.scrollTo(0, keep.win);
+    if (sc2) sc2.scrollTop = keep.detail;
+  }
+}
+function toast(msg) { ui.toast = msg; render(); clearTimeout(toast.t); toast.t = setTimeout(() => { ui.toast = ''; render(); }, 2200); }
+function setVariant(key) { ui.variant = key; ui.detail = null; try { location.hash = key; } catch (e) {} render(); }
+function readHash() { const h = (location.hash || '').slice(1); return VARIANTS.some(v => v.key === h) ? h : 'lanes'; }
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-action]');
+  if (!el || el.matches('select, input, textarea')) return;
+  const a = el.dataset.action;
+  if (a === 'open') { ui.detail = { loop: el.dataset.loop, phase: el.dataset.phase, focus: el.dataset.focus }; ui.scrollToFocus = true; render(); }
+  else if (a === 'close') { ui.detail = null; render(); }
+  else if (a === 'tab') { ui.tab = el.dataset.tab; render(); }
+  else if (a === 'role') { ui.role = el.dataset.role; render(); }
+  else if (a === 'variant') { const i = VARIANTS.findIndex(v => v.key === ui.variant); setVariant(VARIANTS[(i + Number(el.dataset.step) + VARIANTS.length) % VARIANTS.length].key); }
+  else if (a === 'toggle-noshow') { const { iv: i } = locate('iv', el.dataset.iv); i.noShow = !i.noShow; render(); }
+  else if (a === 'add-phase') { const loop = findLoop(el.dataset.loop); const p = ph('Untitled Phase', '', 'expected'); loop.phases.push(p); ui.detail = { loop: loop.id, phase: p.id, focus: '' }; ui.scrollToFocus = true; render(); }
+  else if (a === 'promote') {
+    const lead = state.leads.find(l => l.id === el.dataset.lead);
+    state.leads = state.leads.filter(l => l !== lead);
+    state.loops.push(loopOf({ company: lead.company, role: lead.role, location: lead.location, link: lead.link, applied: lead.appliedOn, notes: lead.notes, phases: [ph('First conversation', 'recruiter screen', 'expected')] }));
+    toast(`${lead.company} is now an Interview Loop`);
+  }
+});
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el.dataset.action === 'toggle-task') { locate('task', el.dataset.task).task.done = el.checked; render(); }
+  if (el.dataset.action === 'set-status') { locate('phase', el.dataset.phase).phase.status = el.value; render(); }
+});
+document.addEventListener('input', e => {
+  if (e.target.dataset.action === 'debrief') locate('iv', e.target.dataset.iv).iv.debrief = e.target.value;
+});
+document.addEventListener('submit', e => {
+  e.preventDefault();
+  const f = e.target;
+  if (f.id === 'lead-form') {
+    const company = f.company.value.trim(), role = f.role.value.trim();
+    if (!company || !role) return;
+    state.leads.push({ id: nid('J'), company, role, location: '', link: '', appliedOn: null, submittedBy: isOwner() ? null : 'Viewer', notes: [] });
+    toast(isOwner() ? 'Job Lead added' : 'Job Lead submitted to the Owner');
+  } else if (f.classList.contains('note-form')) {
+    const text = f.text.value.trim(); if (!text) return;
+    const [kind, id] = f.dataset.target.split(':');
+    const found = locate(kind, id);
+    (found[kind === 'iv' ? 'iv' : kind]).notes.push(note(roleName(), text, NOW));
+    toast('Note added');
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input, textarea, select, [contenteditable]')) return;
+  if (e.key === 'Escape' && ui.detail) { ui.detail = null; render(); }
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    const i = VARIANTS.findIndex(v => v.key === ui.variant);
+    setVariant(VARIANTS[(i + (e.key === 'ArrowRight' ? 1 : -1) + VARIANTS.length) % VARIANTS.length].key);
+  }
+});
+window.addEventListener('hashchange', () => { const k = readHash(); if (k !== ui.variant) { ui.variant = k; ui.detail = null; render(); } });
+
+ui.variant = readHash();
+render();
+</script>
