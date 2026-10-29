@@ -396,7 +396,7 @@ const state = {
         ph('System design', 'technical screen', 'expected'),
         ph('Onsite', 'onsite', 'expected'),
       ] }),
-    loopOf({ company: 'Ostrava Robotics', role: 'Backend Engineer', location: 'Remote', link: 'https://example.com/jobs/ostrava-backend', applied: at(-30, '12:00'), ending: 'ghosted',
+    loopOf({ company: 'Ostrava Robotics', role: 'Backend Engineer', location: 'Remote', link: 'https://example.com/jobs/ostrava-backend', applied: at(-30, '12:00'),
       notes: [note('Owner', 'Recruiter no-show. Two follow-ups unanswered.', at(-4, '10:00'))],
       phases: [ph('Recruiter screen', 'recruiter screen', 'scheduled', { interviews: [iv(at(-9, '15:00'), 30, 'Recruiter, name not given · phone', { noShow: true })] })] }),
     loopOf({ company: 'Quillfeather', role: 'Senior Engineer', location: 'Remote', link: 'https://example.com/jobs/quillfeather-senior', applied: at(-37, '12:00'), ending: 'rejected',
@@ -519,6 +519,11 @@ function statusControl(p) {
   if (!isOwner()) return `<span class="chip ${p.status === 'done' ? 'chip-done' : ''}">${cap(p.status)}</span>`;
   return `<select id="status-${p.id}" data-action="set-status" data-phase="${p.id}" aria-label="Phase status">${STATUSES.map(s => `<option value="${s}" ${s === p.status ? 'selected' : ''}>${cap(s)}</option>`).join('')}</select>`;
 }
+const ENDINGS = ['open', 'offer', 'rejected', 'withdrawn', 'ghosted'];
+function endingControl(loop) {
+  if (!isOwner()) return `<span class="chip ${loop.ending === 'open' ? '' : 'chip-ending-' + loop.ending}">${cap(loop.ending)}</span>`;
+  return `<select id="ending-${loop.id}" data-action="set-ending" data-loop="${loop.id}" aria-label="Loop ending">${ENDINGS.map(s => `<option value="${s}" ${s === loop.ending ? 'selected' : ''}>${s === 'open' ? 'Open' : 'Ended: ' + s}</option>`).join('')}</select>`;
+}
 function notesBlock(notes, target) {
   const fid = 'note-' + target.replace(':', '-');
   return `${notes.length ? `<ul class="notes">${notes.map(n => `<li><span class="chip ${n.by === 'Viewer' ? 'chip-by-viewer' : ''}">${n.by}</span><span>${esc(n.text)}</span><time>${relDay(n.when)}</time></li>`).join('')}</ul>` : ''}
@@ -544,7 +549,7 @@ function interviewCard(loop, phase, i, focus) {
     <div><h4>Prep Tasks <span>${i.prep.length ? `${open} of ${i.prep.length} open` : 'none'}</span></h4>${i.prep.length ? `<ul class="tasks">${i.prep.map(taskRow).join('')}</ul>` : ''}</div>
     <div class="debrief"><h4>Debrief</h4>${debrief}</div>
     <div><h4>Notes</h4>${notesBlock(i.notes, 'iv:' + i.id)}</div>
-    ${isOwner() && past ? `<div><button class="btn" data-action="toggle-noshow" data-iv="${i.id}">${i.noShow ? 'Clear no-show' : 'Mark no-show'}</button></div>` : ''}
+    ${isOwner() && past ? `<div><button class="btn" data-action="toggle-noshow" data-iv="${i.id}">${i.noShow ? 'Clear no-show' : 'Mark no-show'}</button>${i.noShow && loop.ending === 'open' ? ` <button class="btn" data-action="end-loop" data-loop="${loop.id}" data-ending="ghosted">End loop as ghosted</button>` : ''}</div>` : ''}
   </article>`;
 }
 function phaseStrip(loop, phase) {
@@ -558,6 +563,7 @@ function detailBody(loop, phase, focus, { strip = true } = {}) {
       <p class="eyebrow">${esc(loop.company)} · ${esc(loop.role)} ${endingChip(loop)}</p>
       <h2 class="d-title">${esc(phase.name)}</h2>
       <div class="d-meta">${kindChip(phase)}${statusControl(phase)}${phase.due ? `<span class="chip chip-due">Due ${relDayTime(phase.due)}</span>` : ''}${nextPhase(loop) === phase ? '<span class="chip chip-due">Next up</span>' : ''}</div>
+      <div class="d-meta"><span class="muted">Loop</span>${endingControl(loop)}</div>
     </div>
     ${strip ? phaseStrip(loop, phase) : ''}
     <section class="d-sec d-sec-ivs"><h3>Interviews</h3>${phase.interviews.length ? phase.interviews.map(i => interviewCard(loop, phase, i, focus)).join('') : `<p class="empty">No Interviews in this Phase${phase.due ? '. It has a deadline instead' : ' yet'}.</p>`}</section>
@@ -738,6 +744,7 @@ document.addEventListener('click', e => {
   else if (a === 'role') { ui.role = el.dataset.role; render(); }
   else if (a === 'variant') { const i = VARIANTS.findIndex(v => v.key === ui.variant); setVariant(VARIANTS[(i + Number(el.dataset.step) + VARIANTS.length) % VARIANTS.length].key); }
   else if (a === 'toggle-noshow') { const { iv: i } = locate('iv', el.dataset.iv); i.noShow = !i.noShow; render(); }
+  else if (a === 'end-loop') { const loop = findLoop(el.dataset.loop); loop.ending = el.dataset.ending; toast(`${loop.company} ended: ${loop.ending}`); }
   else if (a === 'add-phase') { const loop = findLoop(el.dataset.loop); const p = ph('Untitled Phase', '', 'expected'); loop.phases.push(p); ui.detail = { loop: loop.id, phase: p.id, focus: '' }; ui.scrollToFocus = true; render(); }
   else if (a === 'promote') {
     const lead = state.leads.find(l => l.id === el.dataset.lead);
@@ -750,6 +757,7 @@ document.addEventListener('change', e => {
   const el = e.target;
   if (el.dataset.action === 'toggle-task') { locate('task', el.dataset.task).task.done = el.checked; render(); }
   if (el.dataset.action === 'set-status') { locate('phase', el.dataset.phase).phase.status = el.value; render(); }
+  if (el.dataset.action === 'set-ending') { const loop = findLoop(el.dataset.loop); loop.ending = el.value; toast(el.value === 'open' ? `${loop.company} reopened` : `${loop.company} ended: ${el.value}`); }
 });
 document.addEventListener('input', e => {
   if (e.target.dataset.action === 'debrief') locate('iv', e.target.dataset.iv).iv.debrief = e.target.value;
