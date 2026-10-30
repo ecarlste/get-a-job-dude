@@ -6,7 +6,7 @@ import { nextCookies } from "better-auth/next-js";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/neon-http";
 import { headers } from "next/headers";
-import { createApplication, systemClock, type Person } from "@/application";
+import { createApplication, systemClock, toPerson, type Person } from "@/application";
 import * as schema from "@/db/schema";
 
 // Production wiring: the Neon database, Better Auth, and the application layer.
@@ -37,17 +37,13 @@ export const auth = betterAuth({
             .select()
             .from(schema.user)
             .where(eq(schema.user.id, session.userId));
-          if (signedIn) await application.signedIn(toPerson(signedIn));
+          if (signedIn) await application.recordSignIn(toPerson(signedIn));
         },
       },
     },
   },
   plugins: [nextCookies()],
 });
-
-function toPerson(u: { id: string; name: string; email: string; emailVerified: boolean }): Person {
-  return { userId: u.id, name: u.name, email: u.email, emailVerified: u.emailVerified };
-}
 
 // The signed-in person for this request, or null.
 export async function currentPerson(): Promise<Person | null> {

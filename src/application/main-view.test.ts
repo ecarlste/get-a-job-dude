@@ -1,16 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { seedPeople } from "@/db/seed";
 import { createTestDatabase } from "@/test/database";
-import { createApplication, type Application, type Person } from ".";
+import { createApplication, toPerson, type Application } from ".";
 
 const now = new Date("2026-11-02T15:00:00Z");
 
-const asPerson = (p: { id: string; name: string; email: string }): Person => ({
-  userId: p.id,
-  name: p.name,
-  email: p.email,
-  emailVerified: true,
-});
+const asPerson = (p: { id: string; name: string; email: string }) =>
+  toPerson({ ...p, emailVerified: true });
 
 describe("main view", () => {
   let app: Application;
@@ -25,7 +21,7 @@ describe("main view", () => {
 
   it("greets the configured Owner with an empty search after first sign-in", async () => {
     const avery = asPerson(seedPeople.owner);
-    await app.signedIn(avery);
+    await app.recordSignIn(avery);
 
     expect(await app.mainView(avery)).toEqual({
       access: "owner",
@@ -37,14 +33,14 @@ describe("main view", () => {
 
   it("matches the configured Owner email case-insensitively", async () => {
     const avery = { ...asPerson(seedPeople.owner), email: "Avery@Example.com" };
-    await app.signedIn(avery);
+    await app.recordSignIn(avery);
 
     expect(await app.mainView(avery)).toMatchObject({ access: "owner" });
   });
 
   it("does not make an unverified Google email the Owner", async () => {
     const avery = { ...asPerson(seedPeople.owner), emailVerified: false };
-    await app.signedIn(avery);
+    await app.recordSignIn(avery);
 
     expect(await app.mainView(avery)).toEqual({ access: "none" });
   });
@@ -52,7 +48,7 @@ describe("main view", () => {
   it("shows each Owner only their own Interview Loops", async () => {
     const rowan = asPerson(seedPeople.otherOwner);
     const avery = asPerson(seedPeople.owner);
-    await app.signedIn(avery);
+    await app.recordSignIn(avery);
 
     const rowansView = await app.mainView(rowan);
     const rowansLoops = rowansView.access === "owner" ? rowansView.interviewLoops : [];
@@ -62,7 +58,7 @@ describe("main view", () => {
 
   it("gives no access to a signed-in stranger", async () => {
     const sam = asPerson(seedPeople.stranger);
-    await app.signedIn(sam);
+    await app.recordSignIn(sam);
 
     expect(await app.mainView(sam)).toEqual({ access: "none" });
   });
