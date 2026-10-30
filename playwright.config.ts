@@ -7,7 +7,9 @@ import { defineConfig, devices } from "@playwright/test";
 // anything, and next.config.ts refuses to build or start the server against one.
 
 const port = 3100;
-const baseURL = `http://localhost:${port}`;
+// Loopback only, so nothing else on the network can reach the test-only sign-in.
+const host = "127.0.0.1";
+const baseURL = `http://${host}:${port}`;
 
 const databaseUrl = process.env.E2E_DATABASE_URL ?? "";
 
@@ -28,7 +30,7 @@ export default defineConfig({
     { name: "phone", use: { ...devices["Pixel 7"] } },
   ],
   webServer: {
-    command: `npm run build && npm run start -- --port ${port}`,
+    command: `npm run build && npm run start -- --hostname ${host} --port ${port}`,
     url: baseURL,
     timeout: 300_000,
     // Always a fresh build with this env, never a server already on the port.

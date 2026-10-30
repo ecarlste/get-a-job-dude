@@ -48,18 +48,19 @@ export function createAuth(deps: {
   });
 }
 
-// GET /api/auth/test/sign-in?email=… signs in an existing (seeded) person and
-// redirects to the main view. Registered only when the test flag is set, so the
-// route doesn't exist otherwise.
+// POST /api/auth/test/sign-in { email } signs in an existing (seeded) person and
+// redirects to the main view. A POST, so another site can't sign a browser in with
+// a link or image. Registered only when the test flag is set, so the route doesn't
+// exist otherwise.
 function testSignInPlugin() {
   return {
     id: "test-sign-in",
     endpoints: {
       testSignIn: createAuthEndpoint(
         "/test/sign-in",
-        { method: "GET", query: z.object({ email: z.string() }) },
+        { method: "POST", body: z.object({ email: z.string() }) },
         async (ctx) => {
-          const found = await ctx.context.internalAdapter.findUserByEmail(ctx.query.email);
+          const found = await ctx.context.internalAdapter.findUserByEmail(ctx.body.email);
           if (!found) throw ctx.error("NOT_FOUND", { message: "No such seeded person" });
           const session = await ctx.context.internalAdapter.createSession(found.user.id);
           await setSessionCookie(ctx, { session, user: found.user });

@@ -24,8 +24,12 @@ async function authWith(testSignIn: boolean) {
   return { auth, application };
 }
 
-const signInAs = (email: string) =>
-  new Request(`${baseURL}/api/auth/test/sign-in?email=${encodeURIComponent(email)}`);
+const signInAs = (email: string, method = "POST") =>
+  new Request(`${baseURL}/api/auth/test/sign-in`, {
+    method,
+    headers: { "content-type": "application/json", origin: baseURL },
+    body: method === "GET" ? undefined : JSON.stringify({ email }),
+  });
 
 describe("test-only sign-in", () => {
   it("does not exist without the test flag", async () => {
@@ -49,5 +53,14 @@ describe("test-only sign-in", () => {
       headers: new Headers({ cookie: cookie.split(";")[0] }),
     });
     expect(session?.user.email).toBe(seedPeople.viewer.email);
+  });
+
+  it("does not sign anyone in from a GET, so a link on another site can't", async () => {
+    const { auth } = await authWith(true);
+
+    const response = await auth.handler(signInAs(seedPeople.viewer.email, "GET"));
+
+    expect(response.status).toBeGreaterThanOrEqual(400);
+    expect(response.headers.get("set-cookie")).toBeNull();
   });
 });

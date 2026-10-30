@@ -1,7 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const signInAs = (page: Page, email: string) =>
-  page.goto(`/api/auth/test/sign-in?email=${encodeURIComponent(email)}`);
+// The test-only sign-in sets the session cookie on the page's context; then open the main view.
+async function signInAs(page: Page, email: string) {
+  const response = await page.request.post("/api/auth/test/sign-in", { data: { email }, maxRedirects: 0 });
+  expect(response.status()).toBe(302);
+  await page.goto("/");
+}
 
 const loops = (page: Page) => page.getByRole("list", { name: "Interview Loops" }).getByRole("listitem");
 
