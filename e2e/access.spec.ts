@@ -1,0 +1,20 @@
+import { expect, test, type Page } from "@playwright/test";
+
+const signInAs = (page: Page, email: string) =>
+  page.goto(`/api/auth/test/sign-in?email=${encodeURIComponent(email)}`);
+
+test("the Owner signs in and sees the main view", async ({ page }) => {
+  await signInAs(page, "avery@example.com");
+
+  await expect(page.getByRole("heading", { name: "Hi, Avery Example" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+});
+
+test("a signed-in stranger sees \"no access\" and no data", async ({ page }) => {
+  await signInAs(page, "sam@example.com");
+
+  await expect(page.getByRole("heading", { name: "No access" })).toBeVisible();
+  await expect(page.getByText("This account doesn't have access.")).toBeVisible();
+  await expect(page.getByText("Brightwater")).toHaveCount(0);
+  await expect(page.getByText("Quillfeather")).toHaveCount(0);
+});

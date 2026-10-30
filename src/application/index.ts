@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { interviewLoop, owner } from "@/db/schema";
-import { resolveAccess } from "./access";
+import { can, resolveAccess, type Role } from "./access";
 
 // The application layer: Owner-scoped commands and queries, each taking the
 // signed-in person. The UI reads and writes only through here.
@@ -24,7 +24,7 @@ export const systemClock: Clock = { now: () => new Date() };
 
 export type MainView =
   | {
-      access: "owner";
+      access: Role;
       greetingName: string;
       now: Date;
       interviewLoops: { id: string; company: string; role: string }[];
@@ -49,12 +49,12 @@ export function createApplication(deps: { db: Db; clock: Clock; ownerEmail: stri
 
     async mainView(person: Person): Promise<MainView> {
       const access = await resolveAccess(db, person);
-      if (access.role === "none") return { access: "none" };
+      if (!can(access, "readSearch")) return { access: "none" };
       const interviewLoops = await db
         .select({ id: interviewLoop.id, company: interviewLoop.company, role: interviewLoop.role })
         .from(interviewLoop)
         .where(eq(interviewLoop.ownerId, access.ownerId));
-      return { access: "owner", greetingName: person.name, now: clock.now(), interviewLoops };
+      return { access: access.role, greetingName: person.name, now: clock.now(), interviewLoops };
     },
   };
 }

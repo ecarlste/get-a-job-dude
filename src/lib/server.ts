@@ -1,48 +1,43 @@
 import "server-only";
 import { neon } from "@neondatabase/serverless";
-import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { nextCookies } from "better-auth/next-js";
-import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/neon-http";
+import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
+import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
 import { headers } from "next/headers";
 import { createApplication, systemClock, toPerson, type Person } from "@/application";
+import type { Db } from "@/db/client";
 import * as schema from "@/db/schema";
+import { createAuth } from "./auth";
+import { readTestMode } from "./test-mode";
 
-// Production wiring: the Neon database, Better Auth, and the application layer.
+// Production wiring: the database, Better Auth, and the application layer.
 
-const db = drizzle(neon(process.env.DATABASE_URL!), { schema });
+const testMode = readTestMode(process.env);
+
+// Neon's HTTP driver for Neon; plain Postgres (the throwaway end-to-end database) otherwise.
+function connect(url: string): Db {
+  return new URL(url).hostname.endsWith(".neon.tech")
+    ? drizzleNeon(neon(url), { schema })
+    : drizzlePg(url, { schema });
+}
+
+const db = connect(process.env.DATABASE_URL!);
+
+const fixedNow = testMode.enabled ? testMode.now : undefined;
 
 export const application = createApplication({
   db,
-  clock: systemClock,
+  clock: fixedNow ? { now: () => fixedNow } : systemClock,
   ownerEmail: process.env.OWNER_EMAIL ?? "",
 });
 
-export const auth = betterAuth({
-  database: drizzleAdapter(db, { provider: "pg", schema }),
-  socialProviders: {
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      // Basic openid/email/profile only, kept apart from any later Gmail consent.
-      includeGrantedScopes: false,
-    },
+export const auth = createAuth({
+  db,
+  application,
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID!,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
   },
-  databaseHooks: {
-    session: {
-      create: {
-        after: async (session) => {
-          const [signedIn] = await db
-            .select()
-            .from(schema.user)
-            .where(eq(schema.user.id, session.userId));
-          if (signedIn) await application.recordSignIn(toPerson(signedIn));
-        },
-      },
-    },
-  },
-  plugins: [nextCookies()],
+  testSignIn: testMode.enabled,
 });
 
 // The signed-in person for this request, or null.

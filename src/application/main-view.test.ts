@@ -15,51 +15,41 @@ describe("main view", () => {
     app = createApplication({
       db: await createTestDatabase(),
       clock: { now: () => now },
-      ownerEmail: seedPeople.owner.email,
+      // A seeded Google user who isn't an Owner yet, so first sign-in can make them one.
+      ownerEmail: seedPeople.stranger.email,
     });
   });
 
   it("greets the configured Owner with an empty search after first sign-in", async () => {
-    const avery = asPerson(seedPeople.owner);
-    await app.recordSignIn(avery);
+    const sam = asPerson(seedPeople.stranger);
+    await app.recordSignIn(sam);
 
-    expect(await app.mainView(avery)).toEqual({
+    expect(await app.mainView(sam)).toEqual({
       access: "owner",
-      greetingName: "Avery Example",
+      greetingName: "Sam Example",
       now,
       interviewLoops: [],
     });
   });
 
   it("matches the configured Owner email case-insensitively", async () => {
-    const avery = { ...asPerson(seedPeople.owner), email: "Avery@Example.com" };
-    await app.recordSignIn(avery);
+    const sam = { ...asPerson(seedPeople.stranger), email: "Sam@Example.com" };
+    await app.recordSignIn(sam);
 
-    expect(await app.mainView(avery)).toMatchObject({ access: "owner" });
+    expect(await app.mainView(sam)).toMatchObject({ access: "owner" });
   });
 
   it("does not make an unverified Google email the Owner", async () => {
-    const avery = { ...asPerson(seedPeople.owner), emailVerified: false };
-    await app.recordSignIn(avery);
-
-    expect(await app.mainView(avery)).toEqual({ access: "none" });
-  });
-
-  it("shows each Owner only their own Interview Loops", async () => {
-    const rowan = asPerson(seedPeople.otherOwner);
-    const avery = asPerson(seedPeople.owner);
-    await app.recordSignIn(avery);
-
-    const rowansView = await app.mainView(rowan);
-    const rowansLoops = rowansView.access === "owner" ? rowansView.interviewLoops : [];
-    expect(rowansLoops.map((l) => l.company).sort()).toEqual(["Lumen Ridge", "Quillfeather"]);
-    expect(await app.mainView(avery)).toMatchObject({ interviewLoops: [] });
-  });
-
-  it("gives no access to a signed-in stranger", async () => {
-    const sam = asPerson(seedPeople.stranger);
+    const sam = { ...asPerson(seedPeople.stranger), emailVerified: false };
     await app.recordSignIn(sam);
 
     expect(await app.mainView(sam)).toEqual({ access: "none" });
+  });
+
+  it("does not make any other Google account an Owner", async () => {
+    const jordan = asPerson(seedPeople.viewer);
+    await app.recordSignIn(jordan);
+
+    expect(await app.mainView(jordan)).toMatchObject({ access: "viewer" });
   });
 });
