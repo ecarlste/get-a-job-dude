@@ -81,7 +81,7 @@ The Owner's offer of Viewer access to one email address. Someone becomes a Viewe
 _Avoid_: Invite code, share link
 
 **Note**:
-A remark a Viewer or the Owner attaches to an Interview Loop, Phase, or Interview, such as a recommendation or reminder.
+A remark a Viewer or the Owner attaches to a Job Lead, Interview Loop, Phase, or Interview, such as a recommendation or reminder. A Job Lead's Notes carry over to the Interview Loop it is promoted to.
 _Avoid_: Comment, recommendation
 
 **Contact**:
