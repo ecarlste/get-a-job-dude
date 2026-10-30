@@ -1,7 +1,6 @@
 import "server-only";
 import { neon } from "@neondatabase/serverless";
 import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
-import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
 import { headers } from "next/headers";
 import { createApplication, systemClock, toPerson, type Person } from "@/application";
 import type { Db } from "@/db/client";
@@ -13,9 +12,10 @@ import { readTestMode } from "./test-mode";
 
 const testMode = readTestMode(process.env);
 
-// Neon's HTTP driver for real deployments; plain Postgres for the throwaway end-to-end database.
+// Neon's HTTP driver for real deployments; plain Postgres for the throwaway end-to-end
+// database, imported only in test mode so deployments never load node-postgres.
 const db: Db = testMode.enabled
-  ? drizzlePg(process.env.DATABASE_URL!, { schema })
+  ? (await import("drizzle-orm/node-postgres")).drizzle(process.env.DATABASE_URL!, { schema })
   : drizzleNeon(neon(process.env.DATABASE_URL!), { schema });
 
 const fixedNow = testMode.enabled ? testMode.now : undefined;
