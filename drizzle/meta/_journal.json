@@ -8,6 +8,20 @@
       "when": 1793384335923,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793390161771,
+      "tag": "0001_viewer_membership",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793394510150,
+      "tag": "0002_viewer_membership_owner_idx",
+      "breakpoints": true
     }
   ]
 }

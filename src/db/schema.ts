@@ -1,4 +1,4 @@
-import { boolean, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 // Better Auth's core tables. Field names follow Better Auth's defaults.
 
@@ -62,6 +62,26 @@ export const owner = pgTable("owner", {
     .references(() => user.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// A person's accepted access to one Owner's search as a Viewer. Revoking deletes the row.
+// A person is a Viewer of at most one Owner, so user_id is unique (and indexed for the access check).
+// owner_id is indexed for listing an Owner's Viewers and for the cascade when an Owner is deleted.
+
+export const viewerMembership = pgTable(
+  "viewer_membership",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ownerId: uuid("owner_id")
+      .notNull()
+      .references(() => owner.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .unique()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("viewer_membership_owner_id_idx").on(t.ownerId)],
+);
 
 // Search data. Every table here is keyed by Owner.
 
