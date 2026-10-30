@@ -1,12 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
+import { e2eDatabaseUrl } from "./e2e/database";
 
-// End-to-end tests: the production build against a throwaway Postgres
-// (DATABASE_URL), reset and seeded with synthetic data by global setup.
+// End-to-end tests: the production build against a throwaway Postgres on
+// localhost (E2E_DATABASE_URL), reset and seeded with synthetic data by global setup.
 
 const port = 3100;
 const baseURL = `http://localhost:${port}`;
 
-if (!process.env.DATABASE_URL) throw new Error("Set DATABASE_URL to a throwaway Postgres.");
+const databaseUrl = e2eDatabaseUrl();
 
 export default defineConfig({
   testDir: "e2e",
@@ -28,9 +29,10 @@ export default defineConfig({
     command: `npm run build && npm run start -- --port ${port}`,
     url: baseURL,
     timeout: 300_000,
-    reuseExistingServer: !process.env.CI,
+    // Always a fresh build with this env, never a server already on the port.
+    reuseExistingServer: false,
     env: {
-      DATABASE_URL: process.env.DATABASE_URL,
+      DATABASE_URL: databaseUrl,
       BETTER_AUTH_SECRET: "e2e-only-secret-not-used-anywhere-else",
       BETTER_AUTH_URL: baseURL,
       GOOGLE_CLIENT_ID: "e2e-unused",
