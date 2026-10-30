@@ -10,6 +10,16 @@ export const seedPeople = {
   stranger: { id: "user-stranger", name: "Sam Example", email: "sam@example.com" },
 } as const;
 
+// A fresh test database: the committed migrations, then the seed. Each driver has
+// its own migrator, so the caller passes it in (PGlite for unit tests, node-postgres for e2e).
+export async function migrateAndSeed<D extends Db>(
+  db: D,
+  migrate: (db: D, config: { migrationsFolder: string }) => Promise<unknown>,
+) {
+  await migrate(db, { migrationsFolder: "drizzle" });
+  await seed(db);
+}
+
 // Seeds the Owner with an Interview Loop and an accepted Viewer, a second Owner
 // with their own Interview Loops, and a stranger, so tests can prove Viewer
 // rules and that one Owner's data never reaches another Owner's people.
