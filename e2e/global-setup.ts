@@ -10,7 +10,7 @@ export default async function globalSetup() {
   const db = drizzle(e2eDatabaseUrl(), { schema });
   try {
     await db.execute(sql`drop schema if exists drizzle cascade`);
-    await db.execute(sql`drop schema public cascade`);
+    await db.execute(sql`drop schema if exists public cascade`);
     await db.execute(sql`create schema public`);
     await migrateAndSeed(db, migrate);
   } finally {
