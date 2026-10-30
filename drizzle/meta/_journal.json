@@ -12,15 +12,8 @@
     {
       "idx": 1,
       "version": "7",
-      "when": 1793387106431,
+      "when": 1793390161771,
       "tag": "0001_viewer_membership",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1793388844783,
-      "tag": "0002_viewer_membership_one_per_person",
       "breakpoints": true
     }
   ]
