@@ -12,7 +12,10 @@ export function readTestMode(env: Record<string, string | undefined>): TestMode 
     throw new Error("E2E_TEST_MODE is set on a Vercel deployment. Refusing to start.");
   }
   if (!isLocalDatabase(env.DATABASE_URL)) {
-    throw new Error("E2E_TEST_MODE needs a DATABASE_URL on localhost. Refusing to start.");
+    // `npm run e2e` passes E2E_DATABASE_URL through as DATABASE_URL, so name that too.
+    throw new Error(
+      "E2E_TEST_MODE needs a DATABASE_URL on localhost (for `npm run e2e`, set E2E_DATABASE_URL to a throwaway Postgres on localhost). Refusing to start.",
+    );
   }
   if (!env.E2E_NOW) return { enabled: true };
   const now = new Date(env.E2E_NOW);
