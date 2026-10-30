@@ -1,0 +1,425 @@
+{
+  "model": "claude-opus-5-5",
+  "ran_at": "2026-10-30T15:44:25Z",
+  "search": [
+    {
+      "query_template": "<company> software engineer onsite interview questions",
+      "company": "Google",
+      "stop": "end_turn",
+      "error": null,
+      "results": [
+        {
+          "domain": "glassdoor.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2220
+        },
+        {
+          "domain": "interviewkickstart.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2248
+        },
+        {
+          "domain": "prepfully.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2344
+        },
+        {
+          "domain": "interviewquery.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2312
+        },
+        {
+          "domain": "igotanoffer.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2280
+        },
+        {
+          "domain": "prachub.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2316
+        },
+        {
+          "domain": "prachub.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 1980
+        },
+        {
+          "domain": "aced.io",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2328
+        },
+        {
+          "domain": "prachub.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2312
+        },
+        {
+          "domain": "interviewcoder.co",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2328
+        }
+      ],
+      "citations": [],
+      "searches": 1,
+      "input_tokens": 14229
+    },
+    {
+      "query_template": "<company> software engineer onsite interview questions",
+      "company": "Microsoft",
+      "stop": "end_turn",
+      "error": null,
+      "results": [
+        {
+          "domain": "interviewkickstart.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2288
+        },
+        {
+          "domain": "designgurus.io",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2272
+        },
+        {
+          "domain": "glassdoor.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 1640
+        },
+        {
+          "domain": "interviewquery.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2316
+        },
+        {
+          "domain": "glassdoor.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 1372
+        },
+        {
+          "domain": "igotanoffer.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2336
+        },
+        {
+          "domain": "glassdoor.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 1208
+        },
+        {
+          "domain": "tryexponent.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2252
+        },
+        {
+          "domain": "prachub.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2316
+        },
+        {
+          "domain": "leetcodewizard.io",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2312
+        }
+      ],
+      "citations": [],
+      "searches": 1,
+      "input_tokens": 13934
+    },
+    {
+      "query_template": "<company> software engineer onsite interview questions",
+      "company": "Amazon",
+      "stop": "end_turn",
+      "error": null,
+      "results": [
+        {
+          "domain": "ziprecruiter.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2248
+        },
+        {
+          "domain": "interviewquery.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2340
+        },
+        {
+          "domain": "interviewkickstart.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2300
+        },
+        {
+          "domain": "glassdoor.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2212
+        },
+        {
+          "domain": "prepfully.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2264
+        },
+        {
+          "domain": "igotanoffer.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2304
+        },
+        {
+          "domain": "carrus.io",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2300
+        },
+        {
+          "domain": "frontendinterviewhandbook.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2284
+        },
+        {
+          "domain": "onsites.fyi",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2244
+        }
+      ],
+      "citations": [],
+      "searches": 1,
+      "input_tokens": 14570
+    },
+    {
+      "query_template": "<company> software engineer onsite interview questions",
+      "company": "Netflix",
+      "stop": "end_turn",
+      "error": null,
+      "results": [
+        {
+          "domain": "interviewquery.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2344
+        },
+        {
+          "domain": "prepfully.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2324
+        },
+        {
+          "domain": "interviewkickstart.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2308
+        },
+        {
+          "domain": "glassdoor.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 1228
+        },
+        {
+          "domain": "igotanoffer.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2340
+        },
+        {
+          "domain": "medium.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2272
+        },
+        {
+          "domain": "prachub.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2344
+        },
+        {
+          "domain": "prachub.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2248
+        },
+        {
+          "domain": "aced.io",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2268
+        },
+        {
+          "domain": "gethireready.com",
+          "has_title": true,
+          "page_age": true,
+          "encrypted_len": 2300
+        }
+      ],
+      "citations": [],
+      "searches": 1,
+      "input_tokens": 13777
+    }
+  ],
+  "fetch": {
+    "stop": "end_turn",
+    "not_attempted": [],
+    "results": [
+      {
+        "domain": "httpbin.org",
+        "url": "https://httpbin.org/headers",
+        "media_type": "text/plain",
+        "chars": 239,
+        "has_title": false
+      },
+      {
+        "domain": "glassdoor.com",
+        "url": "https://www.glassdoor.com/Interview/Google-Software-Engineer-Interview-Questions-EI_IE9079.0,6_KO7,24.htm",
+        "error": "url_not_accessible"
+      },
+      {
+        "domain": "reddit.com",
+        "url": "https://www.reddit.com/r/cscareerquestions/",
+        "error": "url_not_allowed"
+      },
+      {
+        "domain": "teamblind.com",
+        "url": "https://www.teamblind.com/company/Google/",
+        "media_type": "text/plain",
+        "chars": 975,
+        "has_title": false
+      },
+      {
+        "domain": "levels.fyi",
+        "url": "https://www.levels.fyi/companies/google/salaries/software-engineer",
+        "media_type": "text/plain",
+        "chars": 28393,
+        "has_title": true
+      },
+      {
+        "domain": "leetcode.com",
+        "url": "https://leetcode.com/discuss/interview-question",
+        "error": "url_not_accessible"
+      },
+      {
+        "domain": "interviewing.io",
+        "url": "https://interviewing.io/guides/hiring-process/google",
+        "media_type": "text/plain",
+        "chars": 23711,
+        "has_title": false
+      },
+      {
+        "domain": "google.com",
+        "url": "https://www.google.com/about/careers/applications/how-we-hire/",
+        "media_type": "text/plain",
+        "chars": 6262,
+        "has_title": true
+      },
+      {
+        "domain": "glassdoor.com",
+        "url": "https://www.glassdoor.com/Interview/Google-Software-Engineer-Interview-Questions-EI_IE9079.0,6_KO7,24_IP2.htm",
+        "error": "url_not_allowed"
+      },
+      {
+        "domain": "leetcodewizard.io",
+        "url": "https://leetcodewizard.io/blog/mastering-the-microsoft-software-engineer-interview-questions-process-and-expert-tips-for-preparation",
+        "media_type": "text/plain",
+        "chars": 19468,
+        "has_title": true
+      }
+    ],
+    "user_agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-User/1.0; +claude-user@anthropic.com)",
+    "fetches": 10,
+    "input_tokens": 34867
+  },
+  "search_domain_counts": [
+    [
+      "glassdoor.com",
+      6
+    ],
+    [
+      "prachub.com",
+      6
+    ],
+    [
+      "interviewkickstart.com",
+      4
+    ],
+    [
+      "interviewquery.com",
+      4
+    ],
+    [
+      "igotanoffer.com",
+      4
+    ],
+    [
+      "prepfully.com",
+      3
+    ],
+    [
+      "aced.io",
+      2
+    ],
+    [
+      "interviewcoder.co",
+      1
+    ],
+    [
+      "designgurus.io",
+      1
+    ],
+    [
+      "tryexponent.com",
+      1
+    ],
+    [
+      "leetcodewizard.io",
+      1
+    ],
+    [
+      "ziprecruiter.com",
+      1
+    ],
+    [
+      "carrus.io",
+      1
+    ],
+    [
+      "frontendinterviewhandbook.com",
+      1
+    ],
+    [
+      "onsites.fyi",
+      1
+    ],
+    [
+      "medium.com",
+      1
+    ],
+    [
+      "gethireready.com",
+      1
+    ]
+  ]
+}
