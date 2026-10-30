@@ -1,7 +1,7 @@
 import { asc, eq } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { interviewLoop, owner, viewerMembership } from "@/db/schema";
-import { can, resolveAccess, type Role } from "./access";
+import { interviewLoop, owner } from "@/db/schema";
+import { can, canBecomeOwner, resolveAccess, type Role } from "./access";
 
 // The application layer: Owner-scoped commands and queries, each taking the
 // signed-in person. The UI reads and writes only through here.
@@ -45,11 +45,7 @@ export function createApplication(deps: { db: Db; clock: Clock; ownerEmail: stri
     async recordSignIn(person: Person) {
       const isOwnerEmail = ownerEmail !== "" && normalizeEmail(person.email) === ownerEmail;
       if (!person.emailVerified || !isOwnerEmail) return;
-      const [membership] = await db
-        .select({ id: viewerMembership.id })
-        .from(viewerMembership)
-        .where(eq(viewerMembership.userId, person.userId));
-      if (membership) {
+      if (!(await canBecomeOwner(db, person))) {
         console.error(`Person ${person.userId} has the configured Owner email but is a Viewer. Not making them the Owner.`);
         return;
       }

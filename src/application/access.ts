@@ -41,6 +41,16 @@ export async function resolveAccess(db: Db, person: Person): Promise<Access> {
   return { role: "none" };
 }
 
+// Whether sign-in may make this person the Owner: not when they're already a
+// Viewer, since nobody is both.
+export async function canBecomeOwner(db: Db, person: Person): Promise<boolean> {
+  const [membership] = await db
+    .select({ id: viewerMembership.id })
+    .from(viewerMembership)
+    .where(eq(viewerMembership.userId, person.userId));
+  return !membership;
+}
+
 type Granted = Extract<Access, { role: Role }>;
 declare const permitted: unique symbol;
 
