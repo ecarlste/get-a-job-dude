@@ -50,8 +50,9 @@ export function createAuth(deps: {
 
 // POST /api/auth/test/sign-in { email } signs in an existing (seeded) person and
 // redirects to the main view. A POST, so another site can't sign a browser in with
-// a link or image. Registered only when the test flag is set, so the route doesn't
-// exist otherwise.
+// a link or image; and a JSON one (Better Auth refuses other body types with a 415),
+// so it can't with a form either. Registered only when the test flag is set, so the
+// route doesn't exist otherwise.
 function testSignInPlugin() {
   return {
     id: "test-sign-in",

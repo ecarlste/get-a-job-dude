@@ -24,11 +24,11 @@ async function authWith(testSignIn: boolean) {
   return { auth, application };
 }
 
-const signInAs = (email: string, method = "POST") =>
+const signInAs = (email: string) =>
   new Request(`${baseURL}/api/auth/test/sign-in`, {
-    method,
+    method: "POST",
     headers: { "content-type": "application/json", origin: baseURL },
-    body: method === "GET" ? undefined : JSON.stringify({ email }),
+    body: JSON.stringify({ email }),
   });
 
 describe("test-only sign-in", () => {
@@ -57,10 +57,34 @@ describe("test-only sign-in", () => {
 
   it("does not sign anyone in from a GET, so a link on another site can't", async () => {
     const { auth } = await authWith(true);
+    const email = encodeURIComponent(seedPeople.viewer.email);
 
-    const response = await auth.handler(signInAs(seedPeople.viewer.email, "GET"));
+    const response = await auth.handler(
+      new Request(`${baseURL}/api/auth/test/sign-in?email=${email}`, { method: "GET" }),
+    );
 
     expect(response.status).toBeGreaterThanOrEqual(400);
+    expect(response.headers.get("set-cookie")).toBeNull();
+  });
+
+  // Forms POST cross-site without a preflight, but only as these types; Better Auth
+  // accepts JSON bodies only, which a cross-site page can't send without one.
+  it.each([
+    ["application/x-www-form-urlencoded", `email=${encodeURIComponent(seedPeople.viewer.email)}`],
+    ["text/plain", JSON.stringify({ email: seedPeople.viewer.email })],
+    ["multipart/form-data; boundary=x", `--x\r\ncontent-disposition: form-data; name="email"\r\n\r\n${seedPeople.viewer.email}\r\n--x--\r\n`],
+  ])("does not sign anyone in from a cross-site %s form POST", async (contentType, body) => {
+    const { auth } = await authWith(true);
+
+    const response = await auth.handler(
+      new Request(`${baseURL}/api/auth/test/sign-in`, {
+        method: "POST",
+        headers: { "content-type": contentType, origin: "https://elsewhere.example" },
+        body,
+      }),
+    );
+
+    expect(response.status).toBe(415);
     expect(response.headers.get("set-cookie")).toBeNull();
   });
 });
