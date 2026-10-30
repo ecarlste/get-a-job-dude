@@ -46,7 +46,12 @@ describe("main view", () => {
     expect(await app.mainView(sam)).toEqual({ access: "none" });
   });
 
-  it("does not make a Viewer an Owner when they sign in", async () => {
+  it("does not make a Viewer an Owner, even when theirs is the configured Owner email", async () => {
+    app = createApplication({
+      db: await createTestDatabase(),
+      clock: { now: () => now },
+      ownerEmail: seedPeople.viewer.email,
+    });
     const jordan = asPerson(seedPeople.viewer);
     await app.recordSignIn(jordan);
 

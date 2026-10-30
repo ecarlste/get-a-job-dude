@@ -22,7 +22,8 @@ const permissions: Record<Role, readonly Permission[]> = {
 // Resolved fresh on every call, so a revoked Viewer loses access on their next request.
 // A person belongs to at most one search: they own it, or they view exactly one
 // Owner's (both owner.user_id and viewer_membership.user_id are unique). One who
-// somehow holds both is refused rather than silently given one of them.
+// somehow holds both gets no access (and a logged error) rather than silently
+// being given one of them, so they still see "No access" and can sign out.
 export async function resolveAccess(db: Db, person: Person): Promise<Access> {
   const [row] = await db
     .select({ ownId: owner.id, viewsId: viewerMembership.ownerId })
@@ -32,7 +33,8 @@ export async function resolveAccess(db: Db, person: Person): Promise<Access> {
     .where(eq(user.id, person.userId));
 
   if (row?.ownId && row.viewsId) {
-    throw new Error(`Person ${person.userId} is both an Owner and a Viewer. Refusing access.`);
+    console.error(`Person ${person.userId} is both an Owner and a Viewer. Refusing access.`);
+    return { role: "none" };
   }
   if (row?.ownId) return { role: "owner", ownerId: row.ownId };
   if (row?.viewsId) return { role: "viewer", ownerId: row.viewsId };

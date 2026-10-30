@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "@/db/client";
 import { owner, viewerMembership } from "@/db/schema";
 import { seedPeople } from "@/db/seed";
@@ -62,11 +62,14 @@ describe("access", () => {
     await expect(insertSecond).rejects.toThrow();
   });
 
-  it("refuses a person who is both an Owner and a Viewer rather than picking one", async () => {
+  it("gives no access to a person who is both an Owner and a Viewer rather than picking one", async () => {
     await db
       .insert(viewerMembership)
       .values({ ownerId: await ownerIdOf(seedPeople.owner.id), userId: seedPeople.otherOwner.id });
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    await expect(app.mainView(asPerson(seedPeople.otherOwner))).rejects.toThrow(/both an Owner and a Viewer/);
+    expect(await app.mainView(asPerson(seedPeople.otherOwner))).toEqual({ access: "none" });
+    expect(logged).toHaveBeenCalledWith(expect.stringMatching(/both an Owner and a Viewer/));
+    logged.mockRestore();
   });
 });

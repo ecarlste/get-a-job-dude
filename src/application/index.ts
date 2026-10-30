@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { interviewLoop, owner } from "@/db/schema";
+import { interviewLoop, owner, viewerMembership } from "@/db/schema";
 import { can, resolveAccess, type Role } from "./access";
 
 // The application layer: Owner-scoped commands and queries, each taking the
@@ -40,10 +40,16 @@ export function createApplication(deps: { db: Db; clock: Clock; ownerEmail: stri
   const ownerEmail = normalizeEmail(deps.ownerEmail);
 
   return {
-    // Called on every sign-in. The configured Owner email becomes the Owner the first time.
+    // Called on every sign-in. The configured Owner email becomes the Owner the first time,
+    // unless that person is already a Viewer: nobody is both.
     async recordSignIn(person: Person) {
       const isOwnerEmail = ownerEmail !== "" && normalizeEmail(person.email) === ownerEmail;
       if (!person.emailVerified || !isOwnerEmail) return;
+      const [membership] = await db
+        .select({ id: viewerMembership.id })
+        .from(viewerMembership)
+        .where(eq(viewerMembership.userId, person.userId));
+      if (membership) return;
       await db.insert(owner).values({ userId: person.userId }).onConflictDoNothing();
     },
 
