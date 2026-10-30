@@ -1,6 +1,6 @@
-import { asc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { owner, viewerMembership } from "@/db/schema";
+import { owner, user, viewerMembership } from "@/db/schema";
 import type { Person } from ".";
 
 // The one server-side access check: signed-in person → their Owner → role.
@@ -20,17 +20,22 @@ const permissions: Record<Role, readonly Permission[]> = {
 };
 
 // Resolved fresh on every call, so a revoked Viewer loses access on their next request.
+// A person belongs to at most one search: they own it, or they view exactly one
+// Owner's (both owner.user_id and viewer_membership.user_id are unique). One who
+// somehow holds both is refused rather than silently given one of them.
 export async function resolveAccess(db: Db, person: Person): Promise<Access> {
-  const [ownerRow] = await db.select().from(owner).where(eq(owner.userId, person.userId));
-  if (ownerRow) return { role: "owner", ownerId: ownerRow.id };
+  const [row] = await db
+    .select({ ownId: owner.id, viewsId: viewerMembership.ownerId })
+    .from(user)
+    .leftJoin(owner, eq(owner.userId, user.id))
+    .leftJoin(viewerMembership, eq(viewerMembership.userId, user.id))
+    .where(eq(user.id, person.userId));
 
-  const [membership] = await db
-    .select()
-    .from(viewerMembership)
-    .where(eq(viewerMembership.userId, person.userId))
-    .orderBy(asc(viewerMembership.createdAt));
-  if (membership) return { role: "viewer", ownerId: membership.ownerId };
-
+  if (row?.ownId && row.viewsId) {
+    throw new Error(`Person ${person.userId} is both an Owner and a Viewer. Refusing access.`);
+  }
+  if (row?.ownId) return { role: "owner", ownerId: row.ownId };
+  if (row?.viewsId) return { role: "viewer", ownerId: row.viewsId };
   return { role: "none" };
 }
 

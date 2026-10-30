@@ -73,7 +73,7 @@ The job seeker whose search this is, and the single source of truth for its Inte
 _Avoid_: User, candidate, admin
 
 **Viewer**:
-A trusted person the Owner grants access, who sees every Interview Loop and may add Notes and submit Job Leads but never changes a loop.
+A trusted person the Owner grants access, who sees every Interview Loop and may add Notes and submit Job Leads but never changes a loop. A person is a Viewer of at most one Owner, and never while being an Owner themselves.
 _Avoid_: Guest, follower, assistant
 
 **Invitation**:

@@ -1,4 +1,7 @@
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
+import type { Db } from "@/db/client";
+import { owner, viewerMembership } from "@/db/schema";
 import { seedPeople } from "@/db/seed";
 import { createTestDatabase } from "@/test/database";
 import { createApplication, toPerson, type Application } from ".";
@@ -12,11 +15,16 @@ const loopCompanies = (view: Awaited<ReturnType<Application["mainView"]>>) =>
   view.access === "none" ? [] : view.interviewLoops.map((l) => l.company).sort();
 
 describe("access", () => {
+  let db: Db;
   let app: Application;
 
+  const ownerIdOf = async (userId: string) =>
+    (await db.select().from(owner).where(eq(owner.userId, userId)))[0].id;
+
   beforeEach(async () => {
+    db = await createTestDatabase();
     app = createApplication({
-      db: await createTestDatabase(),
+      db,
       clock: { now: () => now },
       ownerEmail: seedPeople.owner.email,
     });
@@ -44,5 +52,21 @@ describe("access", () => {
     const rowansView = await app.mainView(asPerson(seedPeople.otherOwner));
 
     expect(loopCompanies(rowansView)).toEqual(["Lumen Ridge", "Quillfeather"]);
+  });
+
+  it("lets a person be a Viewer of at most one Owner", async () => {
+    const insertSecond = db
+      .insert(viewerMembership)
+      .values({ ownerId: await ownerIdOf(seedPeople.otherOwner.id), userId: seedPeople.viewer.id });
+
+    await expect(insertSecond).rejects.toThrow();
+  });
+
+  it("refuses a person who is both an Owner and a Viewer rather than picking one", async () => {
+    await db
+      .insert(viewerMembership)
+      .values({ ownerId: await ownerIdOf(seedPeople.owner.id), userId: seedPeople.otherOwner.id });
+
+    await expect(app.mainView(asPerson(seedPeople.otherOwner))).rejects.toThrow(/both an Owner and a Viewer/);
   });
 });

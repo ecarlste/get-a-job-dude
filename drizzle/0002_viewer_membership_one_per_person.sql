@@ -1,0 +1,2 @@
+ALTER TABLE "viewer_membership" DROP CONSTRAINT "viewer_membership_owner_id_user_id_unique";--> statement-breakpoint
+ALTER TABLE "viewer_membership" ADD CONSTRAINT "viewer_membership_user_id_unique" UNIQUE("user_id");
