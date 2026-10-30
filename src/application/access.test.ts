@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Db } from "@/db/client";
 import { owner, viewerMembership } from "@/db/schema";
 import { seedPeople } from "@/db/seed";
@@ -28,6 +28,10 @@ describe("access", () => {
       clock: { now: () => now },
       ownerEmail: seedPeople.owner.email,
     });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("lets the Owner read their search", async () => {
@@ -70,6 +74,5 @@ describe("access", () => {
 
     expect(await app.mainView(asPerson(seedPeople.otherOwner))).toEqual({ access: "none" });
     expect(logged).toHaveBeenCalledWith(expect.stringMatching(/both an Owner and a Viewer/));
-    logged.mockRestore();
   });
 });
