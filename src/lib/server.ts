@@ -13,14 +13,10 @@ import { readTestMode } from "./test-mode";
 
 const testMode = readTestMode(process.env);
 
-// Neon's HTTP driver for Neon; plain Postgres (the throwaway end-to-end database) otherwise.
-function connect(url: string): Db {
-  return new URL(url).hostname.endsWith(".neon.tech")
-    ? drizzleNeon(neon(url), { schema })
-    : drizzlePg(url, { schema });
-}
-
-const db = connect(process.env.DATABASE_URL!);
+// Neon's HTTP driver for real deployments; plain Postgres for the throwaway end-to-end database.
+const db: Db = testMode.enabled
+  ? drizzlePg(process.env.DATABASE_URL!, { schema })
+  : drizzleNeon(neon(process.env.DATABASE_URL!), { schema });
 
 const fixedNow = testMode.enabled ? testMode.now : undefined;
 

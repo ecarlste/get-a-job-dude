@@ -44,14 +44,14 @@ export function createAuth(deps: {
         },
       },
     },
-    plugins: [...(deps.testSignIn ? [testSignIn()] : []), nextCookies()],
+    plugins: [...(deps.testSignIn ? [testSignInPlugin()] : []), nextCookies()],
   });
 }
 
 // GET /api/auth/test/sign-in?email=… signs in an existing (seeded) person and
 // redirects to the main view. Registered only when the test flag is set, so the
 // route doesn't exist otherwise.
-function testSignIn() {
+function testSignInPlugin() {
   return {
     id: "test-sign-in",
     endpoints: {

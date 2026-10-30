@@ -10,6 +10,13 @@ test("the Owner signs in and sees the main view", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
 });
 
+test("the Owner's Viewer signs in and sees the main view", async ({ page }) => {
+  await signInAs(page, "jordan@example.com");
+
+  await expect(page.getByRole("heading", { name: "Hi, Jordan Example" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No access" })).toHaveCount(0);
+});
+
 test("a signed-in stranger sees \"no access\" and no data", async ({ page }) => {
   await signInAs(page, "sam@example.com");
 

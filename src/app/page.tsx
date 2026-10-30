@@ -19,16 +19,16 @@ export default async function MainPage() {
     <main className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-6">
       <header className="flex items-center justify-between gap-4">
         <h1 className="text-lg font-semibold">
-          {view.access === "owner" ? `Hi, ${view.greetingName}` : "No access"}
+          {view.access === "none" ? "No access" : `Hi, ${view.greetingName}`}
         </h1>
         <SignOutButton />
       </header>
-      {view.access === "owner" ? (
+      {view.access === "none" ? (
+        <p className="text-muted-foreground">This account doesn&apos;t have access.</p>
+      ) : (
         view.interviewLoops.length === 0 && (
           <p className="text-muted-foreground">Nothing here yet.</p>
         )
-      ) : (
-        <p className="text-muted-foreground">This account doesn&apos;t have access.</p>
       )}
     </main>
   );

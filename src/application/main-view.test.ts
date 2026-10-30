@@ -46,7 +46,7 @@ describe("main view", () => {
     expect(await app.mainView(sam)).toEqual({ access: "none" });
   });
 
-  it("does not make any other Google account an Owner", async () => {
+  it("does not make a Viewer an Owner when they sign in", async () => {
     const jordan = asPerson(seedPeople.viewer);
     await app.recordSignIn(jordan);
 
