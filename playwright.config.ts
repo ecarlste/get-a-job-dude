@@ -1,13 +1,15 @@
 import { defineConfig, devices } from "@playwright/test";
-import { e2eDatabaseUrl } from "./e2e/database";
 
 // End-to-end tests: the production build against a throwaway Postgres on
 // localhost (E2E_DATABASE_URL), reset and seeded with synthetic data by global setup.
+// Not validated here, so commands that never touch the database (show-report,
+// --list) work without it: global setup refuses a non-local URL before wiping
+// anything, and next.config.ts refuses to build or start the server against one.
 
 const port = 3100;
 const baseURL = `http://localhost:${port}`;
 
-const databaseUrl = e2eDatabaseUrl();
+const databaseUrl = process.env.E2E_DATABASE_URL ?? "";
 
 export default defineConfig({
   testDir: "e2e",
