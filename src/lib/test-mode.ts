@@ -34,7 +34,8 @@ export function isLocalDatabase(url: string | undefined): boolean {
   try {
     const parsed = new URL(url);
     const overridesHost = [...parsed.searchParams.keys()].some((k) => hostOverrides.has(k.toLowerCase()));
-    return !overridesHost && loopbackHosts.has(parsed.hostname);
+    // WHATWG URL only lowercases the host for special schemes, not postgres:.
+    return !overridesHost && loopbackHosts.has(parsed.hostname.toLowerCase());
   } catch {
     return false;
   }

@@ -32,6 +32,12 @@ describe("test mode", () => {
     }
   });
 
+  it("accepts localhost however it's capitalised", () => {
+    expect(readTestMode({ E2E_TEST_MODE: "1", DATABASE_URL: "postgres://u:p@LocalHost:5432/e2e" })).toEqual({
+      enabled: true,
+    });
+  });
+
   it("rejects a fixed clock that isn't a valid instant", () => {
     expect(() => readTestMode({ E2E_TEST_MODE: "1", DATABASE_URL: localDb, E2E_NOW: "next tuesday" })).toThrow(/E2E_NOW/);
   });
