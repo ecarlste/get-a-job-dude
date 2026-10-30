@@ -51,13 +51,6 @@ describe("access", () => {
     expect(await app.mainView(asPerson(seedPeople.stranger))).toEqual({ access: "none" });
   });
 
-  it("refusing a permission doesn't narrow an Owner or Viewer to no access", () => {
-    const access = { role: "viewer", ownerId: "o" } as Access;
-
-    if (can(access, "readSearch")) expectTypeOf(access.role).toEqualTypeOf<"owner" | "viewer">();
-    else expectTypeOf(access).toEqualTypeOf<Access>();
-  });
-
   it("never shows one Owner's data to another Owner's people, listing loops by company", async () => {
     const rowansView = await app.mainView(asPerson(seedPeople.otherOwner));
 
@@ -81,4 +74,12 @@ describe("access", () => {
     expect(await app.mainView(asPerson(seedPeople.otherOwner))).toEqual({ access: "none" });
     expect(logged).toHaveBeenCalledWith(expect.stringMatching(/both an Owner and a Viewer/));
   });
+});
+
+// Types only, so outside the describe above and its per-test database.
+it("refusing a permission doesn't narrow an Owner or Viewer to no access", () => {
+  const access = { role: "viewer", ownerId: "o" } as Access;
+
+  if (can(access, "readSearch")) expectTypeOf(access.role).toEqualTypeOf<"owner" | "viewer">();
+  else expectTypeOf(access).toEqualTypeOf<Access>();
 });
