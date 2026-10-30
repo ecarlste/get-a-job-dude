@@ -4,12 +4,10 @@ import type { Db } from "@/db/client";
 import { owner, viewerMembership } from "@/db/schema";
 import { seedPeople } from "@/db/seed";
 import { createTestDatabase } from "@/test/database";
-import { createApplication, toPerson, type Application } from ".";
+import { asPerson } from "@/test/people";
+import { createApplication, type Application } from ".";
 
 const now = new Date("2026-11-02T15:00:00Z");
-
-const asPerson = (p: { id: string; name: string; email: string }) =>
-  toPerson({ ...p, emailVerified: true });
 
 const loopCompanies = (view: Awaited<ReturnType<Application["mainView"]>>) =>
   view.access === "none" ? [] : view.interviewLoops.map((l) => l.company).sort();
