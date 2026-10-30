@@ -49,7 +49,12 @@ export function createApplication(deps: { db: Db; clock: Clock; ownerEmail: stri
         .select({ id: viewerMembership.id })
         .from(viewerMembership)
         .where(eq(viewerMembership.userId, person.userId));
-      if (membership) return;
+      if (membership) {
+        console.error(`Person ${person.userId} has the configured Owner email but is a Viewer. Not making them the Owner.`);
+        return;
+      }
+      // Not atomic with the check above: a Viewer membership landing in between would make
+      // this person both. Only the database can rule that out (#45).
       await db.insert(owner).values({ userId: person.userId }).onConflictDoNothing();
     },
 
