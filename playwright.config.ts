@@ -1,5 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 import { seedPeople } from "./src/db/seed";
+import { fixedNow } from "./e2e/test";
 
 // End-to-end tests: the production build against a throwaway Postgres on
 // localhost (E2E_DATABASE_URL), reset and seeded with synthetic data by global setup.
@@ -44,7 +45,7 @@ export default defineConfig({
       GOOGLE_CLIENT_SECRET: "e2e-unused",
       OWNER_EMAIL: seedPeople.owner.email,
       E2E_TEST_MODE: "1",
-      E2E_NOW: "2026-11-02T15:00:00Z",
+      E2E_NOW: fixedNow,
       // A .env.local from `vercel env pull` may carry VERCEL, which would trip the
       // deployment refusal. Next never lets a .env file override a variable already
       // set, even an empty one, so this keeps it out of the local server.
