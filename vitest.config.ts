@@ -8,8 +8,8 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
-    // Each test starts, migrates, and seeds its own PGlite; a cold start on CI
-    // already takes ~3s, too close to the 5s default.
-    testTimeout: 20_000,
+    // The first database test in each file migrates and seeds PGlite (~3.5s
+    // cold), too close to the 5s default; the rest clone it in well under 1s.
+    testTimeout: 10_000,
   },
 });
