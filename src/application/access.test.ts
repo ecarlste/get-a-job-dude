@@ -1,11 +1,12 @@
 import { eq } from "drizzle-orm";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import type { Db } from "@/db/client";
 import { owner, viewerMembership } from "@/db/schema";
 import { seedPeople } from "@/db/seed";
 import { createTestDatabase } from "@/test/database";
 import { asPerson } from "@/test/people";
 import { createApplication, type Application } from ".";
+import { can, type Access } from "./access";
 
 const now = new Date("2026-11-02T15:00:00Z");
 
@@ -48,6 +49,13 @@ describe("access", () => {
 
   it("denies a signed-in stranger and shows no data", async () => {
     expect(await app.mainView(asPerson(seedPeople.stranger))).toEqual({ access: "none" });
+  });
+
+  it("refusing a permission doesn't narrow an Owner or Viewer to no access", () => {
+    const access = { role: "viewer", ownerId: "o" } as Access;
+
+    if (can(access, "readSearch")) expectTypeOf(access.role).toEqualTypeOf<"owner" | "viewer">();
+    else expectTypeOf(access).toEqualTypeOf<Access>();
   });
 
   it("never shows one Owner's data to another Owner's people, listing loops by company", async () => {

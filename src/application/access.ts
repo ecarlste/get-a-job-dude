@@ -41,6 +41,15 @@ export async function resolveAccess(db: Db, person: Person): Promise<Access> {
   return { role: "none" };
 }
 
-export function can(access: Access, permission: Permission): access is Access & { role: Role } {
+type Granted = Extract<Access, { role: Role }>;
+declare const permitted: unique symbol;
+
+// One-sided narrowing: true narrows to an Owner or Viewer, false narrows nothing.
+// A plain `access is Granted` would also claim a refused Owner or Viewer has role
+// "none"; the brand stops TypeScript narrowing them out of the false branch.
+export function can(
+  access: Access,
+  permission: Permission,
+): access is Granted & { readonly [permitted]: true } {
   return access.role !== "none" && permissions[access.role].includes(permission);
 }
