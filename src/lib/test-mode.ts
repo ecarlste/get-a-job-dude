@@ -22,11 +22,16 @@ export function readTestMode(env: Record<string, string | undefined>): TestMode 
 
 const loopbackHosts = new Set(["localhost", "127.0.0.1", "[::1]"]);
 
+// Query parameters node-postgres lets override the URL's host.
+const hostOverrides = new Set(["host", "hostaddr"]);
+
 // True only for a Postgres URL whose host is this machine.
 export function isLocalDatabase(url: string | undefined): boolean {
   if (!url) return false;
   try {
-    return loopbackHosts.has(new URL(url).hostname);
+    const parsed = new URL(url);
+    const overridesHost = [...parsed.searchParams.keys()].some((k) => hostOverrides.has(k.toLowerCase()));
+    return !overridesHost && loopbackHosts.has(parsed.hostname);
   } catch {
     return false;
   }

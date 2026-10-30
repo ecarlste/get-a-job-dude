@@ -20,7 +20,14 @@ describe("test mode", () => {
   });
 
   it("refuses to start against a database that isn't on localhost", () => {
-    for (const DATABASE_URL of [undefined, "postgres://u:p@ep-example.neon.tech/db", "not a url"]) {
+    for (const DATABASE_URL of [
+      undefined,
+      "postgres://u:p@ep-example.neon.tech/db",
+      "not a url",
+      // node-postgres connects to the query parameter's host, not the URL's.
+      "postgres://u:p@localhost/db?host=ep-example.neon.tech",
+      "postgres://u:p@localhost/db?sslmode=require&hostaddr=203.0.113.7",
+    ]) {
       expect(() => readTestMode({ E2E_TEST_MODE: "1", DATABASE_URL })).toThrow(/localhost/);
     }
   });
