@@ -10,7 +10,7 @@ import { createApplication, type Application } from ".";
 const now = new Date("2026-11-02T15:00:00Z");
 
 const loopCompanies = (view: Awaited<ReturnType<Application["mainView"]>>) =>
-  view.access === "none" ? [] : view.interviewLoops.map((l) => l.company).sort();
+  view.access === "none" ? [] : view.interviewLoops.map((l) => l.company);
 
 describe("access", () => {
   let db: Db;
@@ -50,7 +50,7 @@ describe("access", () => {
     expect(await app.mainView(asPerson(seedPeople.stranger))).toEqual({ access: "none" });
   });
 
-  it("never shows one Owner's data to another Owner's people", async () => {
+  it("never shows one Owner's data to another Owner's people, listing loops by company", async () => {
     const rowansView = await app.mainView(asPerson(seedPeople.otherOwner));
 
     expect(loopCompanies(rowansView)).toEqual(["Lumen Ridge", "Quillfeather"]);

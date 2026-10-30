@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { interviewLoop, owner, viewerMembership } from "@/db/schema";
 import { can, resolveAccess, type Role } from "./access";
@@ -64,7 +64,8 @@ export function createApplication(deps: { db: Db; clock: Clock; ownerEmail: stri
       const interviewLoops = await db
         .select({ id: interviewLoop.id, company: interviewLoop.company, role: interviewLoop.role })
         .from(interviewLoop)
-        .where(eq(interviewLoop.ownerId, access.ownerId));
+        .where(eq(interviewLoop.ownerId, access.ownerId))
+        .orderBy(asc(interviewLoop.company), asc(interviewLoop.id));
       return { access: access.role, greetingName: person.name, now: clock.now(), interviewLoops };
     },
   };
