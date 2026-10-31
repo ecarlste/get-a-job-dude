@@ -115,6 +115,18 @@ describe("Interview Loops", () => {
     expect((await loopsSeenBy())[0]).toEqual(brightwater);
   });
 
+  it("refuses every loop change from a signed-in stranger", async () => {
+    const sam = asPerson(seedPeople.stranger);
+    const [brightwater] = await loopsSeenBy();
+    const forbidden = { ok: false, error: "forbidden" };
+
+    expect(await app.createInterviewLoop(sam, quillfeather)).toEqual(forbidden);
+    expect(await app.editInterviewLoop(sam, brightwater.id, quillfeather)).toEqual(forbidden);
+    expect(await app.setLoopEnding(sam, brightwater.id, "rejected")).toEqual(forbidden);
+    expect(await app.deleteInterviewLoop(sam, brightwater.id)).toEqual(forbidden);
+    expect((await loopsSeenBy()).map((l) => l.company)).toEqual(["Brightwater", "Alder & Finch"]);
+  });
+
   describe("as the Viewer", () => {
     const jordan = asPerson(seedPeople.viewer);
 

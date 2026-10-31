@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useState, useTransition } from "react";
-import type { InterviewLoopRow, LoopEnding } from "@/application";
+import type { InterviewLoopRow } from "@/application";
+import { loopEndings, type LoopEnding } from "@/application/loop-ending";
 import { deleteInterviewLoop, saveInterviewLoop, setLoopEnding, type LoopFormState } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,8 +16,6 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
-
-const endings: LoopEnding[] = ["open", "offer", "rejected", "withdrawn", "ghosted"];
 
 // One row per Interview Loop: open loops first, ended ones dimmed below (the
 // query orders them). Controls that change a loop show only for the Owner.
@@ -89,7 +88,7 @@ function EndingSelect({ loop }: { loop: InterviewLoopRow }) {
           startTransition(async () => setError((await setLoopEnding(loop.id, ending)).error));
         }}
       >
-        {endings.map((ending) => (
+        {loopEndings.map((ending) => (
           <option key={ending} value={ending}>
             {ending}
           </option>
@@ -135,8 +134,8 @@ function LoopForm({ loop, onSaved }: { loop?: InterviewLoopRow; onSaved: () => v
     {},
   );
   useEffect(() => {
-    if (state.saved) onSaved();
-  }, [state.saved, onSaved]);
+    if (state.savedAt) onSaved();
+  }, [state.savedAt, onSaved]);
 
   return (
     // noValidate: required-field errors come from the application layer, one source of truth.

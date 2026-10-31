@@ -1,8 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db/client";
-import { interviewLoop, loopEnding } from "@/db/schema";
+import { interviewLoop } from "@/db/schema";
 import { can, resolveAccess } from "./access";
+import { loopEndings, type LoopEnding } from "./loop-ending";
 import type { Person } from ".";
 
 // Interview Loop commands. Each resolves access first and refuses a person
@@ -16,8 +17,6 @@ export type LoopFacts = {
   appliedOn: string;
   people: string;
 };
-
-export type LoopEnding = (typeof loopEnding.enumValues)[number];
 
 export type LoopFactErrors = Partial<Record<keyof LoopFacts, string>>;
 
@@ -79,7 +78,7 @@ export function interviewLoopCommands(db: Db) {
     async setLoopEnding(person: Person, loopId: string, ending: LoopEnding): Promise<CommandResult> {
       const access = await resolveAccess(db, person);
       if (!can(access, "changeLoops")) return { ok: false, error: "forbidden" };
-      if (!loopEnding.enumValues.includes(ending)) throw new Error(`Unknown loop ending: ${ending}`);
+      if (!loopEndings.includes(ending)) throw new Error(`Unknown loop ending: ${ending}`);
       const updated = await db
         .update(interviewLoop)
         .set({ ending })

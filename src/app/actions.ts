@@ -1,13 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { CommandResult, LoopEnding, LoopFacts } from "@/application";
+import type { CommandResult, LoopEnding, LoopFactErrors, LoopFacts } from "@/application";
 import { application, currentPerson } from "@/lib/server";
 
 // Server actions for the main view. Each passes the signed-in person to the
 // application layer, which does the access check; these only adapt forms.
 
-export type LoopFormState = { fieldErrors?: Partial<Record<keyof LoopFacts, string>>; error?: string; saved?: number };
+// savedAt changes on every successful save, so the form can close even when saving twice.
+export type LoopFormState = { fieldErrors?: LoopFactErrors; error?: string; savedAt?: number };
 
 const factsFrom = (form: FormData): LoopFacts => {
   const field = (name: string) => String(form.get(name) ?? "");
@@ -29,7 +30,7 @@ const messages = {
 function toFormState(result: CommandResult): LoopFormState {
   if (result.ok) {
     revalidatePath("/");
-    return { saved: Date.now() };
+    return { savedAt: Date.now() };
   }
   if (result.error === "invalid") return { fieldErrors: result.fieldErrors };
   return { error: messages[result.error] };

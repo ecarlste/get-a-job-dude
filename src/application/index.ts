@@ -2,9 +2,11 @@ import { asc, eq, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { interviewLoop, owner } from "@/db/schema";
 import { can, canBecomeOwner, resolveAccess, type Role } from "./access";
-import { interviewLoopCommands, type LoopEnding, type LoopFacts } from "./interview-loops";
+import { interviewLoopCommands, type LoopFacts } from "./interview-loops";
+import type { LoopEnding } from "./loop-ending";
 
-export type { CommandResult, LoopEnding, LoopFactErrors, LoopFacts } from "./interview-loops";
+export type { CommandResult, LoopFactErrors, LoopFacts } from "./interview-loops";
+export type { LoopEnding } from "./loop-ending";
 
 // The application layer: Owner-scoped commands and queries, each taking the
 // signed-in person. The UI reads and writes only through here.
@@ -70,7 +72,7 @@ export function createApplication(deps: { db: Db; clock: Clock; ownerEmail: stri
     async mainView(person: Person): Promise<MainView> {
       const access = await resolveAccess(db, person);
       if (!can(access, "readSearch")) return { access: "none" };
-      // Timeline ordering: open loops first, then ended ones.
+      // Open loops first, then ended ones.
       const interviewLoops = await db
         .select({
           id: interviewLoop.id,

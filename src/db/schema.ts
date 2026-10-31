@@ -1,4 +1,5 @@
 import { boolean, date, index, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { loopEndings } from "../application/loop-ending";
 
 // Better Auth's core tables. Field names follow Better Auth's defaults.
 
@@ -90,12 +91,13 @@ const ownerId = () =>
     .notNull()
     .references(() => owner.id, { onDelete: "cascade" });
 
-export const loopEnding = pgEnum("loop_ending", ["open", "offer", "rejected", "withdrawn", "ghosted"]);
+export const loopEnding = pgEnum("loop_ending", loopEndings);
 
 // Optional facts are empty strings rather than null, so a form round-trips them as-is.
 // applied_on is a calendar date, not an instant: no time zone applies.
 // job_lead_id is the Job Lead it was promoted from, empty for a loop the Owner created
 // directly. It gets its foreign key when Job Leads land.
+// people is free text until Contacts exist.
 export const interviewLoop = pgTable("interview_loop", {
   id: uuid("id").primaryKey().defaultRandom(),
   ownerId: ownerId(),
