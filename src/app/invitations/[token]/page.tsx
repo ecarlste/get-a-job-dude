@@ -15,7 +15,7 @@ const refusals: Record<InvitationRefusal, { title: string; detail: string; signO
   expired: { title: "This Invitation has expired", detail: askForNew },
   wrongEmail: {
     title: "This Invitation is for a different email",
-    detail: "Sign out, then sign in with the Google account for the email you were invited at.",
+    detail: "Sign out, then sign in with the Google account for the email you were invited at. Google must have verified that email.",
     signOut: true,
   },
   isOwner: { title: "You already own a search", detail: "An Owner can't also be a Viewer.", signOut: true },
@@ -35,19 +35,18 @@ export default async function InvitationPage({ params }: { params: Promise<{ tok
           <p className="text-muted-foreground">{refusals[view.reason].detail}</p>
           {person && refusals[view.reason].signOut && <SignOutButton />}
         </>
+      ) : view.state === "signInRequired" ? (
+        <>
+          <h1 className="text-xl font-semibold">You&apos;ve been invited to view a search</h1>
+          <p className="text-muted-foreground">Sign in with the Google account for the email you were invited at.</p>
+          <SignInButton callbackURL={`/invitations/${token}`} />
+        </>
       ) : (
         <>
           <h1 className="text-xl font-semibold">{view.ownerName} invited you to view their search</h1>
-          {view.state === "signInRequired" ? (
-            <>
-              <p className="text-muted-foreground">Sign in with the Google account for the email you were invited at.</p>
-              <SignInButton callbackURL={`/invitations/${token}`} />
-            </>
-          ) : (
-            <form action={acceptInvitation.bind(null, token)}>
-              <Button type="submit">Accept Invitation</Button>
-            </form>
-          )}
+          <form action={acceptInvitation.bind(null, token)}>
+            <Button type="submit">Accept Invitation</Button>
+          </form>
         </>
       )}
     </main>

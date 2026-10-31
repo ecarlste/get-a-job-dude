@@ -101,6 +101,20 @@ describe("invitations", () => {
     expect(await app.mainView(jordan)).toMatchObject({ interviewLoops: [{ company: "Brightwater" }] });
   });
 
+  it("makes a person accepting two Owners' Invitations at once the Viewer of one, refusing the other", async () => {
+    const averysToken = await invite(seedPeople.stranger.email);
+    const rowans = await app.createInvitation(asPerson(seedPeople.otherOwner), seedPeople.stranger.email);
+    if (!rowans.ok) throw new Error("Rowan's Invitation was refused");
+
+    const results = await Promise.all([
+      app.acceptInvitation(sam, averysToken),
+      app.acceptInvitation(sam, tokenOf(rowans.path)),
+    ]);
+
+    expect(results).toContainEqual({ ok: true });
+    expect(results).toContainEqual({ ok: false, reason: "isViewer" });
+  });
+
   it("lists the Owner's pending Invitations and current Viewers, not used or lapsed ones", async () => {
     await invite("casey@example.com");
     now = new Date("2026-11-03T09:00:00Z");
@@ -172,10 +186,10 @@ describe("invitations", () => {
   });
 
   describe("the Invitation page", () => {
-    it("asks a signed-out person to sign in, naming the Owner, then offers the invited account the Invitation", async () => {
+    it("asks a signed-out person to sign in without naming the Owner, then offers the invited account the Invitation", async () => {
       const token = await invite(seedPeople.stranger.email);
 
-      expect(await app.invitationView(null, token)).toEqual({ state: "signInRequired", ownerName: "Avery Example" });
+      expect(await app.invitationView(null, token)).toEqual({ state: "signInRequired" });
       expect(await app.invitationView(sam, token)).toEqual({ state: "acceptable", ownerName: "Avery Example" });
     });
 

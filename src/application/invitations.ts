@@ -27,6 +27,11 @@ export type InvitationRefusal =
   | "isOwner"
   | "isViewer";
 
+// Postgres's unique_violation, which Drizzle wraps as the error's cause.
+const isUniqueViolation = (error: unknown): boolean =>
+  error instanceof Error &&
+  ((error as { code?: unknown }).code === "23505" || isUniqueViolation(error.cause));
+
 type Found = Pick<typeof invitation.$inferSelect, "status" | "expiresAt" | "email"> & { ownerName: string };
 
 // Why nobody can accept this link now, or null if it's still open. Checked before the
@@ -48,11 +53,18 @@ function refusalFor(found: Found | undefined, person: Person, now: Date): Invita
 }
 
 export type InvitationView =
-  | { state: "signInRequired" | "acceptable"; ownerName: string }
+  | { state: "signInRequired" }
+  | { state: "acceptable"; ownerName: string }
   | { state: "refused"; reason: InvitationRefusal };
 
 export function createInvitations(deps: { db: Db; clock: Clock }) {
   const { db, clock } = deps;
+
+  // The access check for every Owner-only command and query here: the person's Owner, or null.
+  const ownerAccess = async (person: Person) => {
+    const access = await resolveAccess(db, person);
+    return can(access, "manageViewers") ? access : null;
+  };
 
   const findByToken = async (token: string): Promise<Found | undefined> =>
     (
@@ -75,7 +87,9 @@ export function createInvitations(deps: { db: Db; clock: Clock }) {
     const now = clock.now();
     const refusal = person ? refusalFor(found, person, now) : linkRefusal(found, now);
     if (refusal) return { state: "refused", reason: refusal };
-    if (!person) return { state: "signInRequired", ownerName: found!.ownerName };
+    // Not even the Owner's name until the invited account signs in, so a forwarded
+    // link tells its holder nothing about whose search it is.
+    if (!person) return { state: "signInRequired" };
     const eligible = await canBecomeViewer(db, person);
     if (!eligible.ok) return { state: "refused", reason: eligible.reason };
     return { state: "acceptable", ownerName: found!.ownerName };
@@ -88,8 +102,8 @@ export function createInvitations(deps: { db: Db; clock: Clock }) {
       person: Person,
       email: string,
     ): Promise<{ ok: true; path: string } | { ok: false; reason: "noAccess" | "invalidEmail" }> {
-      const access = await resolveAccess(db, person);
-      if (!can(access, "manageViewers")) return { ok: false, reason: "noAccess" };
+      const access = await ownerAccess(person);
+      if (!access) return { ok: false, reason: "noAccess" };
       const parsed = z.email().safeParse(normalizeEmail(email));
       if (!parsed.success) return { ok: false, reason: "invalidEmail" };
 
@@ -144,11 +158,17 @@ export function createInvitations(deps: { db: Db; clock: Clock }) {
               id: sql<string>`gen_random_uuid()`.as("id"),
               ownerId: claimed.ownerId,
               userId: sql<string>`${person.userId}`.as("user_id"),
-              createdAt: sql<Date>`now()`.as("created_at"),
+              createdAt: sql<Date>`${now.toISOString()}::timestamptz`.as("created_at"),
             })
             .from(claimed),
         )
-        .returning({ id: viewerMembership.id });
+        .returning({ id: viewerMembership.id })
+        .catch((error: unknown) => {
+          // Another Invitation of theirs was accepted since canBecomeViewer ran.
+          if (isUniqueViolation(error)) return "isViewer" as const;
+          throw error;
+        });
+      if (inserted === "isViewer") return { ok: false, reason: "isViewer" };
       if (inserted.length === 1) return { ok: true };
       // Someone else's accept or a cancel landed since the check above.
       return { ok: false, reason: refusalFor(await findByToken(token), person, now) ?? "used" };
@@ -156,8 +176,8 @@ export function createInvitations(deps: { db: Db; clock: Clock }) {
 
     // Who can see the Owner's search, and who has an unused, unexpired link to.
     async viewersView(person: Person): Promise<ViewersView> {
-      const access = await resolveAccess(db, person);
-      if (!can(access, "manageViewers")) return { access: "none" };
+      const access = await ownerAccess(person);
+      if (!access) return { access: "none" };
       const pendingInvitations = await db
         .select({ id: invitation.id, email: invitation.email, expiresAt: invitation.expiresAt })
         .from(invitation)
@@ -180,8 +200,8 @@ export function createInvitations(deps: { db: Db; clock: Clock }) {
 
     // Stops an unused link working. Scoped to the Owner, so another Owner's id is "notFound".
     async cancelInvitation(person: Person, invitationId: string): Promise<OwnerCommandResult> {
-      const access = await resolveAccess(db, person);
-      if (!can(access, "manageViewers")) return { ok: false, reason: "noAccess" };
+      const access = await ownerAccess(person);
+      if (!access) return { ok: false, reason: "noAccess" };
       const cancelled = await db
         .update(invitation)
         .set({ status: "cancelled" })
@@ -199,8 +219,8 @@ export function createInvitations(deps: { db: Db; clock: Clock }) {
     // Deletes the membership. resolveAccess reads it fresh on every request, so the
     // Viewer loses access on their next one, even mid-session.
     async revokeViewer(person: Person, viewerUserId: string): Promise<OwnerCommandResult> {
-      const access = await resolveAccess(db, person);
-      if (!can(access, "manageViewers")) return { ok: false, reason: "noAccess" };
+      const access = await ownerAccess(person);
+      if (!access) return { ok: false, reason: "noAccess" };
       const revoked = await db
         .delete(viewerMembership)
         .where(and(eq(viewerMembership.userId, viewerUserId), eq(viewerMembership.ownerId, access.ownerId)))

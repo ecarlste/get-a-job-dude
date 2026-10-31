@@ -28,11 +28,13 @@ test("the Owner invites a Viewer, who signs in with the invited account and acce
 
   const caseysPage = await newPage();
   await caseysPage.goto(link);
-  await expect(caseysPage.getByRole("heading", { name: `${owner.name} invited you to view their search` })).toBeVisible();
+  await expect(caseysPage.getByRole("heading", { name: "You've been invited to view a search" })).toBeVisible();
   await expect(caseysPage.getByRole("button", { name: "Sign in with Google" })).toBeVisible();
+  await expect(caseysPage.getByText(owner.name)).toHaveCount(0);
 
   await signInAs(caseysPage, casey);
   await caseysPage.goto(link);
+  await expect(caseysPage.getByRole("heading", { name: `${owner.name} invited you to view their search` })).toBeVisible();
   await caseysPage.getByRole("button", { name: "Accept Invitation" }).click();
   await expect(caseysPage.getByRole("heading", { name: `Hi, ${casey.name}` })).toBeVisible();
   await expect(loops(caseysPage)).toHaveText([/Brightwater/]);
