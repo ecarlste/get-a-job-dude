@@ -37,14 +37,14 @@ describe("access", () => {
     const view = await app.mainView(asPerson(seedPeople.owner));
 
     expect(view).toMatchObject({ access: "owner", greetingName: "Avery Example" });
-    expect(loopCompanies(view)).toEqual(["Brightwater"]);
+    expect(loopCompanies(view)).toEqual(["Brightwater", "Alder & Finch"]);
   });
 
   it("lets the Owner's Viewer read the Owner's search", async () => {
     const view = await app.mainView(asPerson(seedPeople.viewer));
 
     expect(view).toMatchObject({ access: "viewer", greetingName: "Jordan Example" });
-    expect(loopCompanies(view)).toEqual(["Brightwater"]);
+    expect(loopCompanies(view)).toEqual(["Brightwater", "Alder & Finch"]);
   });
 
   it("denies a signed-in stranger and shows no data", async () => {

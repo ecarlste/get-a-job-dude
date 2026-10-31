@@ -1,4 +1,4 @@
-import { boolean, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, date, index, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 // Better Auth's core tables. Field names follow Better Auth's defaults.
 
@@ -90,10 +90,22 @@ const ownerId = () =>
     .notNull()
     .references(() => owner.id, { onDelete: "cascade" });
 
+export const loopEnding = pgEnum("loop_ending", ["open", "offer", "rejected", "withdrawn", "ghosted"]);
+
+// Optional facts are empty strings rather than null, so a form round-trips them as-is.
+// applied_on is a calendar date, not an instant: no time zone applies.
+// job_lead_id is the Job Lead it was promoted from, empty for a loop the Owner created
+// directly. It gets its foreign key when Job Leads land.
 export const interviewLoop = pgTable("interview_loop", {
   id: uuid("id").primaryKey().defaultRandom(),
   ownerId: ownerId(),
   company: text("company").notNull(),
   role: text("role").notNull(),
+  location: text("location").notNull().default(""),
+  jobLink: text("job_link").notNull().default(""),
+  appliedOn: date("applied_on"),
+  people: text("people").notNull().default(""),
+  ending: loopEnding("ending").notNull().default("open"),
+  jobLeadId: uuid("job_lead_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

@@ -20,7 +20,7 @@ export async function migrateAndSeed<D extends Db>(
   await seed(db);
 }
 
-// Seeds the Owner with an Interview Loop and an accepted Viewer, a second Owner
+// Seeds the Owner with an open and an ended Interview Loop and an accepted Viewer, a second Owner
 // with their own Interview Loops, and a stranger, so tests can prove Viewer
 // rules and that one Owner's data never reaches another Owner's people.
 export async function seed(db: Db) {
@@ -31,9 +31,10 @@ export async function seed(db: Db) {
 
   const [avery] = await db.insert(owner).values({ userId: ownerPerson.id }).returning();
   await db.insert(viewerMembership).values({ ownerId: avery.id, userId: viewer.id });
-  await db
-    .insert(interviewLoop)
-    .values({ ownerId: avery.id, company: "Brightwater", role: "Platform Engineer" });
+  await db.insert(interviewLoop).values([
+    { ownerId: avery.id, company: "Brightwater", role: "Platform Engineer" },
+    { ownerId: avery.id, company: "Alder & Finch", role: "Senior Engineer", ending: "withdrawn" },
+  ]);
 
   const [rowan] = await db.insert(owner).values({ userId: otherOwner.id }).returning();
   await db.insert(interviewLoop).values([

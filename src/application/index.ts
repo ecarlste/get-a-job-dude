@@ -1,7 +1,10 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { interviewLoop, owner } from "@/db/schema";
 import { can, canBecomeOwner, resolveAccess, type Role } from "./access";
+import { interviewLoopCommands, type LoopEnding, type LoopFacts } from "./interview-loops";
+
+export type { CommandResult, LoopEnding, LoopFactErrors, LoopFacts } from "./interview-loops";
 
 // The application layer: Owner-scoped commands and queries, each taking the
 // signed-in person. The UI reads and writes only through here.
@@ -22,12 +25,20 @@ export type Clock = { now(): Date };
 
 export const systemClock: Clock = { now: () => new Date() };
 
+export type InterviewLoopRow = Omit<LoopFacts, "appliedOn"> & {
+  id: string;
+  appliedOn: string | null;
+  ending: LoopEnding;
+  jobLeadId: string | null;
+};
+
 export type MainView =
   | {
       access: Role;
       greetingName: string;
       now: Date;
-      interviewLoops: { id: string; company: string; role: string }[];
+      canChangeLoops: boolean;
+      interviewLoops: InterviewLoopRow[];
     }
   | { access: "none" };
 
@@ -40,6 +51,8 @@ export function createApplication(deps: { db: Db; clock: Clock; ownerEmail: stri
   const ownerEmail = normalizeEmail(deps.ownerEmail);
 
   return {
+    ...interviewLoopCommands(db),
+
     // Called on every sign-in. The configured Owner email becomes the Owner the first time,
     // unless that person is already a Viewer: nobody is both.
     async recordSignIn(person: Person) {
@@ -57,12 +70,29 @@ export function createApplication(deps: { db: Db; clock: Clock; ownerEmail: stri
     async mainView(person: Person): Promise<MainView> {
       const access = await resolveAccess(db, person);
       if (!can(access, "readSearch")) return { access: "none" };
+      // Timeline ordering: open loops first, then ended ones.
       const interviewLoops = await db
-        .select({ id: interviewLoop.id, company: interviewLoop.company, role: interviewLoop.role })
+        .select({
+          id: interviewLoop.id,
+          company: interviewLoop.company,
+          role: interviewLoop.role,
+          location: interviewLoop.location,
+          jobLink: interviewLoop.jobLink,
+          appliedOn: interviewLoop.appliedOn,
+          people: interviewLoop.people,
+          ending: interviewLoop.ending,
+          jobLeadId: interviewLoop.jobLeadId,
+        })
         .from(interviewLoop)
         .where(eq(interviewLoop.ownerId, access.ownerId))
-        .orderBy(asc(interviewLoop.company), asc(interviewLoop.id));
-      return { access: access.role, greetingName: person.name, now: clock.now(), interviewLoops };
+        .orderBy(sql`${interviewLoop.ending} <> 'open'`, asc(interviewLoop.company), asc(interviewLoop.id));
+      return {
+        access: access.role,
+        greetingName: person.name,
+        now: clock.now(),
+        canChangeLoops: can(access, "changeLoops"),
+        interviewLoops,
+      };
     },
   };
 }

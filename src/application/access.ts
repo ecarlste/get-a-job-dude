@@ -12,10 +12,10 @@ export type Role = "owner" | "viewer";
 export type Access = { role: Role; ownerId: string } | { role: "none" };
 
 // Grows with each Owner-only or Viewer capability.
-export type Permission = "readSearch";
+export type Permission = "readSearch" | "changeLoops";
 
 const permissions: Record<Role, readonly Permission[]> = {
-  owner: ["readSearch"],
+  owner: ["readSearch", "changeLoops"],
   viewer: ["readSearch"],
 };
 

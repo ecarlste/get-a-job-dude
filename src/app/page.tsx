@@ -1,4 +1,5 @@
 import { SignInButton, SignOutButton } from "@/components/auth-buttons";
+import { InterviewLoops } from "@/components/interview-loops";
 import { application, currentPerson } from "@/lib/server";
 
 export default async function MainPage() {
@@ -25,17 +26,8 @@ export default async function MainPage() {
       </header>
       {view.access === "none" ? (
         <p className="text-muted-foreground">This account doesn&apos;t have access.</p>
-      ) : view.interviewLoops.length === 0 ? (
-        <p className="text-muted-foreground">Nothing here yet.</p>
       ) : (
-        <ul aria-label="Interview Loops" className="flex flex-col gap-2">
-          {view.interviewLoops.map((loop) => (
-            <li key={loop.id} className="rounded-lg border p-3">
-              <span className="font-medium">{loop.company}</span>
-              <span className="text-muted-foreground"> · {loop.role}</span>
-            </li>
-          ))}
-        </ul>
+        <InterviewLoops loops={view.interviewLoops} canChange={view.canChangeLoops} />
       )}
     </main>
   );

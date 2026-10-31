@@ -27,6 +27,7 @@ describe("main view", () => {
       access: "owner",
       greetingName: "Sam Example",
       now,
+      canChangeLoops: true,
       interviewLoops: [],
     });
   });
