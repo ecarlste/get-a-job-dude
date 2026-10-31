@@ -4,9 +4,9 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 
-export function SignInButton() {
+export function SignInButton({ callbackURL = "/" }: { callbackURL?: string }) {
   return (
-    <Button onClick={() => authClient.signIn.social({ provider: "google", callbackURL: "/" })}>
+    <Button onClick={() => authClient.signIn.social({ provider: "google", callbackURL })}>
       Sign in with Google
     </Button>
   );

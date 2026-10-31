@@ -12,10 +12,10 @@ export type Role = "owner" | "viewer";
 export type Access = { role: Role; ownerId: string } | { role: "none" };
 
 // Grows with each Owner-only or Viewer capability.
-export type Permission = "readSearch";
+export type Permission = "readSearch" | "manageViewers";
 
 const permissions: Record<Role, readonly Permission[]> = {
-  owner: ["readSearch"],
+  owner: ["readSearch", "manageViewers"],
   viewer: ["readSearch"],
 };
 
@@ -49,6 +49,18 @@ export async function canBecomeOwner(db: Db, person: Person): Promise<boolean> {
     .from(viewerMembership)
     .where(eq(viewerMembership.userId, person.userId));
   return !membership;
+}
+
+// Whether accepting an Invitation may make this person a Viewer: not when they're an
+// Owner (the reverse of canBecomeOwner), nor already some Owner's Viewer.
+export async function canBecomeViewer(
+  db: Db,
+  person: Person,
+): Promise<{ ok: true } | { ok: false; reason: "isOwner" | "isViewer" }> {
+  const access = await resolveAccess(db, person);
+  if (access.role === "owner") return { ok: false, reason: "isOwner" };
+  if (access.role === "viewer") return { ok: false, reason: "isViewer" };
+  return { ok: true };
 }
 
 type Granted = Extract<Access, { role: Role }>;

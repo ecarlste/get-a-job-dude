@@ -83,6 +83,30 @@ export const viewerMembership = pgTable(
   (t) => [index("viewer_membership_owner_id_idx").on(t.ownerId)],
 );
 
+// The Owner's offer of Viewer access to one email address. Kept apart from viewer_membership
+// so a pending, expired or cancelled Invitation never grants access: accepting one is what
+// inserts the membership. Only a hash of the link's token is stored. "Expired" isn't a
+// status: it's a pending Invitation whose expires_at has passed by the injected clock.
+
+export const invitation = pgTable(
+  "invitation",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ownerId: uuid("owner_id")
+      .notNull()
+      .references(() => owner.id, { onDelete: "cascade" }),
+    // Lowercased, so matching the signed-in email is case-insensitive.
+    email: text("email").notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    status: text("status", { enum: ["pending", "accepted", "cancelled"] })
+      .notNull()
+      .default("pending"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  },
+  (t) => [index("invitation_owner_id_idx").on(t.ownerId)],
+);
+
 // Search data. Every table here is keyed by Owner.
 
 const ownerId = () =>

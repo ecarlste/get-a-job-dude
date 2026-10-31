@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { SignInButton, SignOutButton } from "@/components/auth-buttons";
+import { buttonVariants } from "@/components/ui/button";
 import { application, currentPerson } from "@/lib/server";
 
 export default async function MainPage() {
@@ -21,7 +23,14 @@ export default async function MainPage() {
         <h1 className="text-lg font-semibold">
           {view.access === "none" ? "No access" : `Hi, ${view.greetingName}`}
         </h1>
-        <SignOutButton />
+        <div className="flex items-center gap-2">
+          {view.access === "owner" && (
+            <Link href="/viewers" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+              Viewers
+            </Link>
+          )}
+          <SignOutButton />
+        </div>
       </header>
       {view.access === "none" ? (
         <p className="text-muted-foreground">This account doesn&apos;t have access.</p>

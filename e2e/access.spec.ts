@@ -1,15 +1,8 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "./test";
+import { expect, signInAs, test } from "./test";
 import { seedPeople } from "../src/db/seed";
 
 const { owner, viewer, stranger } = seedPeople;
-
-// The test-only sign-in sets the session cookie on the page's context; then open the main view.
-async function signInAs(page: Page, { email }: { email: string }) {
-  const response = await page.request.post("/api/auth/test/sign-in", { data: { email }, maxRedirects: 0 });
-  expect(response.status()).toBe(302);
-  await page.goto("/");
-}
 
 const loops = (page: Page) => page.getByRole("list", { name: "Interview Loops" }).getByRole("listitem");
 

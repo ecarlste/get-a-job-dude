@@ -2,6 +2,7 @@ import { asc, eq } from "drizzle-orm";
 import type { Db } from "@/db/client";
 import { interviewLoop, owner } from "@/db/schema";
 import { can, canBecomeOwner, resolveAccess, type Role } from "./access";
+import { createInvitations, normalizeEmail } from "./invitations";
 
 // The application layer: Owner-scoped commands and queries, each taking the
 // signed-in person. The UI reads and writes only through here.
@@ -33,13 +34,13 @@ export type MainView =
 
 export type Application = ReturnType<typeof createApplication>;
 
-const normalizeEmail = (email: string) => email.trim().toLowerCase();
-
 export function createApplication(deps: { db: Db; clock: Clock; ownerEmail: string }) {
   const { db, clock } = deps;
   const ownerEmail = normalizeEmail(deps.ownerEmail);
 
   return {
+    ...createInvitations({ db, clock }),
+
     // Called on every sign-in. The configured Owner email becomes the Owner the first time,
     // unless that person is already a Viewer: nobody is both.
     async recordSignIn(person: Person) {
