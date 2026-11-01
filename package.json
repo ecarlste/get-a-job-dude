@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=24"
+    "node": "24.x",
+    "npm": "11.x"
   },
   "scripts": {
     "prepare": "lefthook install",
